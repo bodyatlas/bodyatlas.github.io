@@ -1,0 +1,182 @@
+<!doctype html>
+<html lang="en">
+<head>
+<title>Layered Body Atlas</title>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=Newsreader:ital,wght@0,400;0,500;1,400&display=swap">
+<link rel="stylesheet" href="core/ui.css">
+<meta name="description" content="Interactive 3D human anatomy you can peel from skin to bone: every body system, both eyes and ears in detail, cross-sections and part-by-part notes.">
+<style>[hidden]{display:none!important} img{max-width:100%}</style>
+</head>
+<body>
+
+<div class="atlas" id="atlas">
+  <div class="stage" id="stage"></div>
+  <div class="labels" id="labels" aria-hidden="true"></div>
+  <div class="tooltip" id="tooltip" role="status" hidden></div>
+
+  <header class="topbar" id="topbar">
+    <div class="topbar-main">
+      <h1 class="title">Layered Body Atlas</h1>
+      <div class="search">
+        <input id="search" type="search" placeholder="Search a structure" autocomplete="off" spellcheck="false" role="combobox" aria-label="Search parts by English or Latin name" aria-autocomplete="list" aria-controls="results" aria-expanded="false">
+        <kbd aria-hidden="true">/</kbd>
+        <ul class="results" id="results" role="listbox" aria-label="Search results" hidden></ul>
+      </div>
+    </div>
+    <div class="tools">
+      <div class="seg" role="group" aria-label="Camera view">
+        <button class="btn small" type="button" data-view="front" title="Front view (1)">Front</button>
+        <button class="btn small" type="button" data-view="back" title="Back view (2)">Back</button>
+        <button class="btn small" type="button" data-view="left" title="Left view (3)">Left</button>
+        <button class="btn small" type="button" data-view="right" title="Right view (4)">Right</button>
+        <button class="btn small" type="button" data-view="top" title="Top view (5)">Top</button>
+        <button class="btn small" type="button" data-view="bottom" title="Bottom view (6)">Bottom</button>
+        <button class="btn small" type="button" data-view="iso" title="Three-quarter view (7)">3/4</button>
+      </div>
+      <span class="select-wrap"><select class="select" id="focus-select" aria-label="Focus on a region or organ"></select></span>
+      <span class="sep" aria-hidden="true"></span>
+      <div class="seg" role="group" aria-label="Sex">
+        <button class="btn small" type="button" data-sex="male" aria-pressed="true">Male</button>
+        <button class="btn small" type="button" data-sex="female" aria-pressed="false">Female</button>
+      </div>
+      <span class="sep" aria-hidden="true"></span>
+      <button class="btn small" type="button" id="btn-ghost" aria-pressed="false" title="Draw peeled layers as faint shells (G)">Ghost</button>
+      <button class="btn small" type="button" id="btn-labels" aria-pressed="false" title="Label visible structures (L)">Labels</button>
+      <button class="btn small" type="button" id="btn-cut" aria-pressed="false" title="Cross-section plane">Cut</button>
+      <button class="btn small quiet" type="button" id="btn-reset" title="Reset everything (R)">Reset</button>
+    </div>
+  </header>
+
+  <aside class="rail" id="rail" aria-label="Layers and systems">
+    <div class="sheet-head"><h2>Layers &amp; systems</h2><button class="btn small quiet" type="button" data-close-sheet>Close</button></div>
+    <section>
+      <div class="depth-head">
+        <h3 class="section-title">Peel depth</h3>
+        <span class="depth-value" id="depth-value">1.00</span>
+      </div>
+      <div class="depth-slider" id="depth-slider" role="slider" tabindex="0" aria-label="Peel depth: hides every layer above the chosen one" aria-valuemin="1" aria-valuemax="11" aria-valuenow="1" aria-orientation="vertical">
+        <div class="depth-track"><div class="depth-fill" id="depth-fill"></div></div>
+        <div class="depth-thumb" id="depth-thumb"></div>
+        <div class="depth-ticks" id="depth-ticks"></div>
+      </div>
+      <p class="depth-legend" id="depth-legend"></p>
+    </section>
+    <section>
+      <h3 class="section-title">Systems</h3>
+      <ul class="systems" id="systems"></ul>
+    </section>
+    <section>
+      <h3 class="section-title">Skin tone</h3>
+      <div class="tones" id="tones" role="group" aria-label="Skin tone"></div>
+    </section>
+    <p class="rail-foot" id="modules-note"></p>
+  </aside>
+
+  <aside class="panel" id="panel" aria-label="Selected structure">
+    <div class="sheet-head"><h2>Details</h2><button class="btn small quiet" type="button" data-close-sheet>Close</button></div>
+    <div class="panel-empty" id="panel-empty">
+      <h2>How to explore</h2>
+      <p>Hover any structure for its name; click it for the full card.</p>
+      <ul>
+        <li>Drag to rotate, right-drag or shift-drag to pan, scroll to zoom toward the cursor.</li>
+        <li>Double-click a structure to fly to it.</li>
+        <li>Drag the depth slider to peel the body away layer by layer. Ghost keeps the peeled layers as faint shells.</li>
+        <li>Cut slices the body along any axis; Focus jumps to an organ or region.</li>
+        <li>Search by English or Latin name.</li>
+      </ul>
+      <div class="keys">
+        <kbd>1</kbd>&ndash;<kbd>6</kbd> views &middot; <kbd>7</kbd> 3/4 &middot; <kbd>F</kbd> focus &middot; <kbd>H</kbd> hide &middot; <kbd>I</kbd> isolate &middot; <kbd>R</kbd> reset<br>
+        <kbd>[</kbd> <kbd>]</kbd> peel depth &middot; <kbd>G</kbd> ghost &middot; <kbd>L</kbd> labels &middot; <kbd>/</kbd> search &middot; <kbd>Esc</kbd> deselect
+      </div>
+    </div>
+    <article class="panel-card" id="panel-card" hidden>
+      <button class="panel-close" id="sel-close" type="button" aria-label="Deselect">&times;</button>
+      <h2 class="part-name" id="sel-name"></h2>
+      <p class="part-latin" id="sel-latin"></p>
+      <div class="chips" id="sel-chips"></div>
+      <dl class="facts" id="sel-facts"></dl>
+      <div class="relations" id="sel-rel"></div>
+      <div class="actions" id="sel-actions">
+        <button class="btn small" type="button" data-act="focus" title="Frame this structure (F)">Focus</button>
+        <button class="btn small" type="button" data-act="isolate" aria-pressed="false" title="Show only this structure (I)">Isolate</button>
+        <button class="btn small" type="button" data-act="hide" title="Hide this structure (H)">Hide</button>
+        <button class="btn small quiet" type="button" data-act="showall" title="Undo hide and isolate">Show all</button>
+      </div>
+    </article>
+  </aside>
+
+  <div class="cutbar" id="cutbar" role="group" aria-label="Cross-section" hidden>
+    <span class="cut-title">Cross-section</span>
+    <div class="seg" id="cut-axis" role="group" aria-label="Cut axis">
+      <button class="btn small" type="button" data-axis="x" aria-pressed="true">X sagittal</button>
+      <button class="btn small" type="button" data-axis="y" aria-pressed="false">Y horizontal</button>
+      <button class="btn small" type="button" data-axis="z" aria-pressed="false">Z coronal</button>
+    </div>
+    <input type="range" id="cut-pos" min="0" max="1" step="0.005" value="0.5" aria-label="Cut position along the axis">
+    <span class="cut-pos-value" id="cut-pos-value"></span>
+    <label class="check"><input type="checkbox" id="cut-flip"> Flip</label>
+    <button class="btn small quiet" type="button" id="cut-off">Off</button>
+  </div>
+
+  <div class="stats" id="stats" aria-live="off"></div>
+
+  <div class="notice" id="notice" role="status" hidden>
+    <span class="notice-text" id="notice-text"></span>
+    <button class="btn small quiet" type="button" id="notice-close" aria-label="Dismiss notice">&times;</button>
+  </div>
+
+  <div class="sheetbar" id="sheetbar">
+    <button class="btn" type="button" id="sheet-layers" aria-pressed="false">Layers</button>
+    <button class="btn" type="button" id="sheet-details" aria-pressed="false">Details</button>
+  </div>
+
+  <div class="loading" id="loading" role="status" aria-live="polite">
+    <div class="loading-card">
+      <div class="loading-title">Layered Body Atlas</div>
+      <p class="loading-sub" id="loading-sub">Loading modules</p>
+      <div class="progress" aria-hidden="true"><div class="progress-fill" id="loading-fill"></div></div>
+      <p class="loading-note" id="loading-note"></p>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/0.160.0/three.min.js"></script>
+<script>
+  /* Module load bookkeeping: each systems/<id>.js gets its own script tag below. A missing file fires the tag's onerror;
+     a broken file surfaces as a window error whose filename names the module. The viewer reads this to explain skips. */
+  window.__ATLAS_LOAD = { missing: [], errors: [] };
+  window.__atlasMissing = function (id) { window.__ATLAS_LOAD.missing.push(id); };
+  window.addEventListener('error', function (e) {
+    var m = /systems\/([a-z0-9_]+)\.js/i.exec(e.filename || '');
+    if (m) window.__ATLAS_LOAD.errors.push({ id: m[1], message: String(e.message || 'script error') });
+  });
+</script>
+<script src="core/landmarks.js"></script>
+<script src="core/helpers.js"></script>
+<script src="core/registry.js"></script>
+<script src="systems/integumentary.js" onerror="__atlasMissing('integumentary')"></script>
+<script src="systems/skeletal.js" onerror="__atlasMissing('skeletal')"></script>
+<script src="systems/muscular_upper.js" onerror="__atlasMissing('muscular_upper')"></script>
+<script src="systems/muscular_lower.js" onerror="__atlasMissing('muscular_lower')"></script>
+<script src="systems/cardiovascular.js" onerror="__atlasMissing('cardiovascular')"></script>
+<script src="systems/respiratory.js" onerror="__atlasMissing('respiratory')"></script>
+<script src="systems/digestive.js" onerror="__atlasMissing('digestive')"></script>
+<script src="systems/urinary_reproductive.js" onerror="__atlasMissing('urinary_reproductive')"></script>
+<script src="systems/nervous_central.js" onerror="__atlasMissing('nervous_central')"></script>
+<script src="systems/nervous_peripheral.js" onerror="__atlasMissing('nervous_peripheral')"></script>
+<script src="systems/glands.js" onerror="__atlasMissing('glands')"></script>
+<script src="systems/lymphatic.js" onerror="__atlasMissing('lymphatic')"></script>
+<script src="systems/eye.js" onerror="__atlasMissing('eye')"></script>
+<script src="systems/ear.js" onerror="__atlasMissing('ear')"></script>
+<script src="core/controls.js"></script>
+<script src="core/viewer.js"></script>
+<script>
+  if (window.ATLAS_VIEWER) { window.ATLAS_VIEWER.boot(); }
+  else { var n = document.getElementById('loading-note'); if (n) { n.textContent = 'core/viewer.js did not load.'; n.className += ' err'; } }
+</script>
+</body>
+</html>
