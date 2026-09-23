@@ -2,7 +2,7 @@
 
 Interactive 3D human anatomy you can peel from skin to bone: every body system, both eyes and ears in detail, cross-sections and part-by-part notes.
 
-**Live:** https://ykidus053-create.github.io/layered-body-atlas/
+**Live:** https://bodyatlas.github.io/
 
 - Peel the body layer by layer with the depth slider: skin, fat, superficial and deep muscles, vessels, nerves, lymphatics, organs, glands, skeleton.
 - Toggle body systems, ghost peeled layers, cut cross-sections on any axis, and switch between the male and female body.
