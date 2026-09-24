@@ -2,6 +2,7 @@
 :root {
   --bg: #efe9df;
   --stage-bg: #efe9df;
+  --stage-bg-bottom: #e3dacb;
   --stage-ground: #ddd3c4;
   --panel: rgba(255, 252, 247, 0.84);
   --panel-solid: #fbf8f3;
@@ -32,7 +33,8 @@
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     --bg: #0f1723;
-    --stage-bg: #0f1723;
+    --stage-bg: #131c29;
+    --stage-bg-bottom: #0b111a;
     --stage-ground: #1a2433;
     --panel: rgba(17, 25, 37, 0.8);
     --panel-solid: #141d2b;
@@ -57,7 +59,8 @@
 }
 :root[data-theme="dark"] {
   --bg: #0f1723;
-  --stage-bg: #0f1723;
+  --stage-bg: #131c29;
+  --stage-bg-bottom: #0b111a;
   --stage-ground: #1a2433;
   --panel: rgba(17, 25, 37, 0.8);
   --panel-solid: #141d2b;
@@ -93,7 +96,7 @@ button { cursor: pointer; }
 
 /* ---------- stage */
 .atlas { position: fixed; inset: 0; overflow: hidden; background: var(--bg); color: var(--text); font: 13px/1.45 var(--font-ui); }
-.stage { position: absolute; inset: 0; z-index: 0; }
+.stage { position: absolute; inset: 0; z-index: 0; background: radial-gradient(120% 90% at 50% 38%, var(--stage-bg) 0%, var(--stage-bg-bottom) 100%); }
 .stage canvas { display: block; width: 100%; height: 100%; touch-action: none; outline: none; }
 .labels { position: absolute; inset: 0; z-index: 1; pointer-events: none; overflow: hidden; }
 .label { position: absolute; left: 0; top: 0; transform: translate(-50%, -50%); font: 11px/1.3 var(--font-ui); background: var(--label-bg); color: var(--label-text); border: 1px solid var(--label-border); padding: 1px 6px; border-radius: 3px; white-space: nowrap; will-change: transform; }
