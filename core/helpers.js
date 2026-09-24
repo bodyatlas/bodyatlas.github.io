@@ -309,16 +309,259 @@
   H.bbox = (g) => { g.computeBoundingBox(); return g.boundingBox; };
   H.center = (g) => { const b = H.bbox(g); return b.getCenter(new THREE.Vector3()); };
 
-  // ------------------------------------------------------------------ materials
+  // ------------------------------------------------------------------ materials: tissue shading
+  /* Every part is a THREE.MeshPhysicalMaterial with a per-tissue preset (wet clearcoat on organs and vessels, fibrous sheen on
+     tendons, peach-fuzz sheen + red wrap-lighting subsurface on skin, waxy fat, porous bone...) and a small shader patch that adds
+     world-space procedural surface detail with no textures or UVs: bump (medium + fine noise), colour mottling, fibre striations
+     (along the geometry's u axis, or azimuthal for hair), roughness variation and a wrap/back-light subsurface term.
+     Detail fades automatically once its features are smaller than a pixel, so the whole body stays clean while close-ups get pores,
+     fibres and lobules. All tissues share ONE shader program; presets only differ in uniforms and physical properties. */
+  const TISSUE_GLSL = {
+    pars: [
+      'uniform vec4 uDetail;', // x medium freq (1/m), y medium amplitude (m), z fine freq, w fine amplitude
+      'uniform vec4 uMottle;', // x freq, y brightness amount, z tint mix, w roughness variation
+      'uniform vec3 uMottleTint;',  // tint of the positive mottle patches
+      'uniform vec3 uMottleTint2;', // tint of the negative patches
+      'uniform vec3 uTone;',        // albedo multiplier for the whole tissue
+      'uniform vec4 uStria;',  // x bands across (per uv unit or per radian), y jitter along, z amplitude (m), w mode: 0 off, 1 along u (bands vary with v), 2 along v, 3 azimuthal about uStriaCenter
+      'uniform vec3 uStriaCenter;',
+      'uniform vec4 uSSS;',    // rgb subsurface colour, w wrap
+      'varying vec3 vWPos;',
+      'float ah3(vec3 p){ p = fract(p * 0.3183099 + vec3(0.11, 0.37, 0.73)); p *= 17.0; return fract(p.x * p.y * p.z * (p.x + p.y + p.z)); }',
+      'float anoise(vec3 x){ vec3 i = floor(x); vec3 f = fract(x); f = f * f * (3.0 - 2.0 * f);',
+      '  return mix(mix(mix(ah3(i), ah3(i + vec3(1,0,0)), f.x), mix(ah3(i + vec3(0,1,0)), ah3(i + vec3(1,1,0)), f.x), f.y),',
+      '             mix(mix(ah3(i + vec3(0,0,1)), ah3(i + vec3(1,0,1)), f.x), mix(ah3(i + vec3(0,1,1)), ah3(i + vec3(1,1,1)), f.x), f.y), f.z); }',
+      'float afbm(vec3 p){ return anoise(p) * 0.5 + anoise(p * 2.03 + 11.7) * 0.3 + anoise(p * 4.11 + 5.3) * 0.2; }',
+      // fade factor for a feature of wavelength 1/freq when it gets smaller than ~1.5 px (fw = world size of one pixel)
+      'float alod(float fw, float freq){ return 1.0 - smoothstep(0.25, 0.9, fw * freq); }',
+      'float atlasHeight(vec3 P, float fw){',
+      '  float h = 0.0;',
+      '  if (uDetail.y > 0.0) h += uDetail.y * (afbm(P * uDetail.x) - 0.5) * alod(fw, uDetail.x);',
+      '  if (uDetail.w > 0.0) h += uDetail.w * (anoise(P * uDetail.z + 7.3) - 0.5) * alod(fw, uDetail.z);',
+      '  if (uStria.w > 0.5) {',
+      '    vec2 c;',
+      '    if (uStria.w < 1.5) c = vec2(vUv.y * uStria.x, vUv.x * uStria.y);',
+      '    else if (uStria.w < 2.5) c = vec2(vUv.x * uStria.x, vUv.y * uStria.y);',
+      '    else { vec3 d = P - uStriaCenter; c = vec2(atan(d.z, d.x) * uStria.x, d.y * uStria.y); }',
+      '    float s = anoise(vec3(c, 0.37)) * 0.65 + anoise(vec3(c * 2.1 + 3.1, 1.9)) * 0.35;',
+      '    float fwS = fw * uStria.x * (uStria.w > 2.5 ? 1.0 / max(1e-4, length(P - uStriaCenter)) : 0.0);',
+      '    h += uStria.z * (s - 0.5) * (uStria.w > 2.5 ? alod(fwS, 1.0) : 1.0);',
+      '  }',
+      '  return h; }',
+      'vec3 atlasPerturb(vec3 surf_pos, vec3 surf_norm, vec2 dHdxy, float faceDirection){',
+      '  vec3 vSigmaX = dFdx(surf_pos); vec3 vSigmaY = dFdy(surf_pos); vec3 vN = surf_norm;',
+      '  vec3 R1 = cross(vSigmaY, vN); vec3 R2 = cross(vN, vSigmaX);',
+      '  float fDet = dot(vSigmaX, R1); fDet *= faceDirection;',
+      '  vec3 vGrad = sign(fDet) * (dHdxy.x * R1 + dHdxy.y * R2);',
+      '  return normalize(abs(fDet) * surf_norm - vGrad); }'
+    ].join('\n'),
+    sss: [
+      '#ifdef ATLAS_TISSUE',
+      '  if (uSSS.w > 0.0) {',
+      '    float w = uSSS.w;',
+      '    float nl = dot(geometryNormal, directLight.direction);',
+      '    float wrapped = saturate((nl + w) / ((1.0 + w) * (1.0 + w)));',
+      '    float bleed = max(0.0, wrapped - dotNL);',
+      '    vec3 lt = normalize(directLight.direction + geometryNormal * 0.3);',
+      '    float back = pow(saturate(dot(geometryViewDir, -lt)), 4.0) * 0.35 * w;',
+      '    reflectedLight.directDiffuse += directLight.color * (bleed + back) * uSSS.rgb * material.diffuseColor * RECIPROCAL_PI;',
+      '  }',
+      '#endif'
+    ].join('\n'),
+    start: [
+      '#ifdef ATLAS_TISSUE',
+      '  float atlasFw = length(fwidth(vWPos));',
+      '  float atlasM = afbm(vWPos * uMottle.x + 3.7);',
+      '#endif'
+    ].join('\n'),
+    color: [
+      '#ifdef ATLAS_TISSUE',
+      '  { float m = (atlasM - 0.5) * 2.0;',
+      '    vec3 tint = mix(uMottleTint2, uMottleTint, smoothstep(-1.0, 1.0, m));',
+      '    diffuseColor.rgb *= mix(vec3(1.0), tint, uMottle.z) * uTone * (1.0 + uMottle.y * m); }',
+      '#endif'
+    ].join('\n'),
+    rough: [
+      '#ifdef ATLAS_TISSUE',
+      '  roughnessFactor = clamp(roughnessFactor * (1.0 + uMottle.w * (atlasM - 0.5) * 2.0), 0.03, 1.0);',
+      '#endif'
+    ].join('\n'),
+    normal: [
+      '#ifdef ATLAS_TISSUE',
+      '  { float atlasH = atlasHeight(vWPos, atlasFw);',
+      '    normal = atlasPerturb(-vViewPosition, normal, vec2(dFdx(atlasH), dFdy(atlasH)), faceDirection); }',
+      '#endif'
+    ].join('\n')
+  };
+  function tissueOnBeforeCompile(shader) {
+    const u = this.atlasUniforms; if (u) for (const k in u) shader.uniforms[k] = u[k];
+    shader.vertexShader = shader.vertexShader
+      .replace('#include <common>', '#include <common>\nvarying vec3 vWPos;')
+      .replace('#include <worldpos_vertex>', '#include <worldpos_vertex>\nvWPos = (modelMatrix * vec4(transformed, 1.0)).xyz;');
+    const lp = THREE.ShaderChunk.lights_physical_pars_fragment.replace('reflectedLight.directDiffuse += irradiance * BRDF_Lambert( material.diffuseColor );',
+      'reflectedLight.directDiffuse += irradiance * BRDF_Lambert( material.diffuseColor );\n' + TISSUE_GLSL.sss);
+    shader.fragmentShader = shader.fragmentShader
+      .replace('#include <lights_physical_pars_fragment>', TISSUE_GLSL.pars + '\n' + lp)
+      .replace('#include <clipping_planes_fragment>', '#include <clipping_planes_fragment>\n' + TISSUE_GLSL.start)
+      .replace('#include <color_fragment>', '#include <color_fragment>\n' + TISSUE_GLSL.color)
+      .replace('#include <roughnessmap_fragment>', '#include <roughnessmap_fragment>\n' + TISSUE_GLSL.rough)
+      .replace('#include <normal_fragment_maps>', '#include <normal_fragment_maps>\n' + TISSUE_GLSL.normal);
+  }
+
+  /* Presets. phys = MeshPhysicalMaterial properties; detail [medFreq, medAmp, fineFreq, fineAmp] (freq per metre, amplitude metres);
+     mottle [freq, brightness, tintMix, roughnessVar] + tint; stria [across, along, amplitude, mode]; sss [r, g, b, wrap]. */
+  const T = (o) => Object.assign({ phys: {}, detail: [300, 0, 900, 0], mottle: [40, 0.06, 0, 0.1], tint: [1, 1, 1], tint2: [1, 1, 1], tone: [1, 1, 1], stria: [0, 0, 0, 0], sss: [0, 0, 0, 0] }, o);
+  H.TISSUES = {
+    generic:   T({ phys: { roughness: 0.5, clearcoat: 0.25, clearcoatRoughness: 0.45, specularIntensity: 0.5 }, detail: [300, 0.00012, 1200, 0.00004], mottle: [45, 0.07, 0, 0.12] }),
+    skin:      T({ phys: { roughness: 0.5, specularIntensity: 0.4, sheen: 0.45, sheenRoughness: 0.75, sheenColor: '#e8a98c', clearcoat: 0.08, clearcoatRoughness: 0.55 },
+                   detail: [110, 0.0004, 1500, 0.00011], mottle: [26, 0.06, 0.75, 0.22], tint: [1.08, 0.86, 0.82], tint2: [0.94, 0.96, 1.02], tone: [1.0, 0.97, 0.95], sss: [0.95, 0.4, 0.3, 0.4] }),
+    lip:       T({ phys: { roughness: 0.38, specularIntensity: 0.6, clearcoat: 0.45, clearcoatRoughness: 0.35, sheen: 0.25, sheenColor: '#ff9a8a' },
+                   detail: [900, 0.00005, 2400, 0.00003], stria: [22, 3, 0.00004, 2], mottle: [80, 0.06, 0, 0.1], sss: [1.0, 0.35, 0.3, 0.45] }),
+    hair:      T({ phys: { roughness: 0.55, specularIntensity: 0.6, sheen: 0.7, sheenRoughness: 0.5, sheenColor: '#7a5a48', clearcoat: 0.08, clearcoatRoughness: 0.4 },
+                   detail: [400, 0.00012, 3000, 0.00006], stria: [420, 40, 0.00035, 3], center: [0, 1.66, -0.01], mottle: [70, 0.16, 0, 0.2], tone: [0.9, 0.88, 0.86] }),
+    nail:      T({ phys: { roughness: 0.28, clearcoat: 0.8, clearcoatRoughness: 0.2, specularIntensity: 0.7 }, stria: [30, 4, 0.00003, 2], sss: [0.95, 0.55, 0.5, 0.35] }),
+    fat:       T({ phys: { roughness: 0.55, clearcoat: 0.35, clearcoatRoughness: 0.5, sheen: 0.25, sheenColor: '#f3d98a', specularIntensity: 0.45 },
+                   detail: [160, 0.0005, 700, 0.0001], mottle: [55, 0.12, 0.5, 0.15], tint: [1.0, 0.94, 0.8], sss: [0.98, 0.85, 0.45, 0.45] }),
+    fascia:    T({ phys: { roughness: 0.42, sheen: 0.55, sheenRoughness: 0.6, sheenColor: '#ffffff', specularIntensity: 0.55, clearcoat: 0.15 },
+                   detail: [500, 0.00008, 1800, 0.00003], stria: [70, 5, 0.00007, 1], mottle: [60, 0.06, 0, 0.1], sss: [0.9, 0.85, 0.75, 0.15] }),
+    muscle:    T({ phys: { roughness: 0.4, clearcoat: 0.6, clearcoatRoughness: 0.35, specularIntensity: 0.6, sheen: 0.12, sheenColor: '#ff7a7a' },
+                   detail: [90, 0.00035, 900, 0.00006], stria: [64, 4, 0.0002, 1], mottle: [36, 0.1, 0.6, 0.2], tint: [0.84, 0.76, 0.8], tint2: [1.06, 0.96, 0.9], sss: [0.9, 0.22, 0.16, 0.28] }),
+    heart:     T({ phys: { roughness: 0.36, clearcoat: 0.75, clearcoatRoughness: 0.28, specularIntensity: 0.7 },
+                   detail: [120, 0.0003, 900, 0.00006], stria: [48, 3, 0.0001, 1], mottle: [30, 0.12, 0.55, 0.18], tint: [1.05, 0.92, 0.7], sss: [0.9, 0.25, 0.18, 0.3] }),
+    bone:      T({ phys: { roughness: 0.6, specularIntensity: 0.4, sheen: 0.18, sheenRoughness: 0.8, sheenColor: '#fff2d6', clearcoat: 0.05 },
+                   detail: [140, 0.00025, 800, 0.0001], mottle: [22, 0.12, 0.8, 0.22], tint: [1.0, 0.92, 0.76], tint2: [0.9, 0.9, 0.9], tone: [0.9, 0.86, 0.78], sss: [0.95, 0.85, 0.65, 0.2] }),
+    tooth:     T({ phys: { roughness: 0.22, clearcoat: 0.85, clearcoatRoughness: 0.15, specularIntensity: 0.8 }, detail: [600, 0.00003, 2000, 0.00002], mottle: [90, 0.05, 0.3, 0.1], tint: [1.0, 0.95, 0.85], sss: [0.95, 0.9, 0.8, 0.4] }),
+    cartilage: T({ phys: { roughness: 0.34, clearcoat: 0.55, clearcoatRoughness: 0.35, specularIntensity: 0.6 }, detail: [300, 0.00008, 1500, 0.00003], mottle: [50, 0.06, 0, 0.12], tone: [0.93, 0.95, 0.94], sss: [0.75, 0.9, 0.9, 0.45] }),
+    vessel:    T({ phys: { roughness: 0.36, clearcoat: 0.7, clearcoatRoughness: 0.25, specularIntensity: 0.7 },
+                   detail: [400, 0.00006, 1600, 0.00003], stria: [10, 3, 0.00006, 1], mottle: [70, 0.1, 0, 0.15], sss: [0.9, 0.25, 0.2, 0.32] }),
+    nerve:     T({ phys: { roughness: 0.48, clearcoat: 0.3, clearcoatRoughness: 0.45, sheen: 0.35, sheenRoughness: 0.6, sheenColor: '#fff3c0', specularIntensity: 0.5 },
+                   detail: [500, 0.00005, 1800, 0.00003], stria: [12, 3, 0.00008, 1], mottle: [60, 0.07, 0, 0.12], sss: [0.98, 0.88, 0.5, 0.3] }),
+    brain:     T({ phys: { roughness: 0.42, clearcoat: 0.65, clearcoatRoughness: 0.35, specularIntensity: 0.65 },
+                   detail: [220, 0.00015, 1000, 0.00004], mottle: [60, 0.1, 0.6, 0.15], tint: [1.04, 0.82, 0.78], sss: [0.92, 0.62, 0.52, 0.3] }),
+    whiteMatter: T({ phys: { roughness: 0.45, clearcoat: 0.5, clearcoatRoughness: 0.4, specularIntensity: 0.55 }, detail: [300, 0.00008, 1200, 0.00003], mottle: [50, 0.05, 0, 0.1], sss: [0.95, 0.9, 0.8, 0.3] }),
+    organ:     T({ phys: { roughness: 0.38, clearcoat: 0.75, clearcoatRoughness: 0.3, specularIntensity: 0.7 },
+                   detail: [260, 0.00018, 1100, 0.00005], mottle: [42, 0.13, 0.55, 0.18], tint: [0.9, 0.8, 0.78], sss: [0.88, 0.32, 0.22, 0.3] }),
+    liver:     T({ phys: { roughness: 0.36, clearcoat: 0.8, clearcoatRoughness: 0.28, specularIntensity: 0.7 },
+                   detail: [700, 0.00006, 2000, 0.00003], mottle: [36, 0.09, 0.4, 0.15], tint: [0.85, 0.75, 0.7], sss: [0.85, 0.3, 0.2, 0.25] }),
+    gut:       T({ phys: { roughness: 0.38, clearcoat: 0.75, clearcoatRoughness: 0.3, specularIntensity: 0.7 },
+                   detail: [180, 0.0002, 900, 0.00005], stria: [90, 4, 0.00006, 2], mottle: [40, 0.12, 0.6, 0.18], tint: [1.0, 0.86, 0.82], sss: [0.92, 0.45, 0.35, 0.35] }),
+    lung:      T({ phys: { roughness: 0.5, clearcoat: 0.4, clearcoatRoughness: 0.45, specularIntensity: 0.5 },
+                   detail: [500, 0.00012, 1600, 0.00006], mottle: [90, 0.22, 0.7, 0.2], tint: [0.55, 0.5, 0.55], sss: [0.95, 0.6, 0.6, 0.3] }),
+    gland:     T({ phys: { roughness: 0.44, clearcoat: 0.5, clearcoatRoughness: 0.4, specularIntensity: 0.6 },
+                   detail: [450, 0.00014, 1400, 0.00004], mottle: [70, 0.12, 0.5, 0.15], tint: [0.92, 0.82, 0.75], sss: [0.95, 0.7, 0.45, 0.35] }),
+    lymph:     T({ phys: { roughness: 0.46, clearcoat: 0.4, clearcoatRoughness: 0.45, specularIntensity: 0.5 }, detail: [500, 0.0001, 1500, 0.00003], mottle: [80, 0.1, 0, 0.12], sss: [0.8, 0.95, 0.75, 0.35] }),
+    mucosa:    T({ phys: { roughness: 0.32, clearcoat: 0.85, clearcoatRoughness: 0.25, specularIntensity: 0.75 },
+                   detail: [700, 0.0001, 2200, 0.00005], mottle: [60, 0.1, 0.5, 0.15], tint: [1.0, 0.8, 0.78], sss: [0.95, 0.4, 0.35, 0.4] }),
+    membrane:  T({ phys: { roughness: 0.28, clearcoat: 0.8, clearcoatRoughness: 0.2, specularIntensity: 0.6 }, detail: [300, 0.00003, 1200, 0.00002], mottle: [50, 0.04, 0, 0.1], sss: [0.9, 0.85, 0.8, 0.35] }),
+    sclera:    T({ phys: { roughness: 0.3, clearcoat: 0.6, clearcoatRoughness: 0.15, specularIntensity: 0.7 }, tone: [1.0, 0.985, 0.96],
+                   detail: [1200, 0.00002, 3000, 0.00001], mottle: [260, 0.08, 0.7, 0.1], tint: [1.0, 0.72, 0.7], sss: [0.95, 0.8, 0.75, 0.3] }),
+    iris:      T({ phys: { roughness: 0.55, clearcoat: 0.6, clearcoatRoughness: 0.2, specularIntensity: 0.6 }, stria: [90, 2, 0.00004, 2], mottle: [900, 0.18, 0.5, 0.2], tint: [0.7, 0.75, 0.85] }),
+    glass:     T({ phys: { roughness: 0.05, clearcoat: 1.0, clearcoatRoughness: 0.05, specularIntensity: 1.0, ior: 1.38 } }),
+    cornea:    T({ phys: { roughness: 0.04, clearcoat: 1.0, clearcoatRoughness: 0.04, specularIntensity: 1.0, ior: 1.376 }, opacity: 0.16, tone: [0.06, 0.06, 0.06] }),   // a clear film: highlight only, no diffuse haze
+    film:      T({ phys: { roughness: 0.08, clearcoat: 0.5, clearcoatRoughness: 0.1, specularIntensity: 0.4 }, opacity: 0.08, tone: [0.1, 0.1, 0.1] }),   // conjunctiva, aqueous humour: all but invisible
+    dark:      T({ phys: { roughness: 0.95, clearcoat: 0, specularIntensity: 0.1 }, tone: [0.35, 0.35, 0.35], force: true })
+  };
+  // H.COLORS key -> tissue preset (used when a module passes one of the shared palette colours)
+  H.TISSUE_BY_COLOR = {
+    skin: 'skin', eyelid: 'skin', ear: 'skin', penis: 'skin', lip: 'lip', hair: 'hair', nail: 'nail', fat: 'fat',
+    fascia: 'fascia', tendon: 'fascia', ligament: 'fascia', muscle: 'muscle', muscleDeep: 'muscle', heart: 'heart',
+    bone: 'bone', ossicle: 'bone', cochlea: 'bone', tooth: 'tooth', cartilage: 'cartilage', larynx: 'cartilage', trachea: 'cartilage', bronchus: 'cartilage', marrow: 'organ',
+    artery: 'vessel', vein: 'vessel', capillary: 'vessel', pericardium: 'membrane', pleura: 'membrane', meninges: 'membrane', ventricle: 'membrane', eardrum: 'membrane',
+    nerve: 'nerve', spinalCord: 'nerve', brain: 'brain', whiteMatter: 'whiteMatter',
+    lymph: 'lymph', lymphNode: 'lymph', tonsil: 'mucosa', thymus: 'gland', spleen: 'organ', lung: 'lung',
+    liver: 'liver', gallbladder: 'organ', stomach: 'gut', smallIntestine: 'gut', colon: 'gut', esophagus: 'gut', pancreas: 'gland', tongue: 'mucosa', salivary: 'gland',
+    kidney: 'organ', bladder: 'organ', ureter: 'gut', urethra: 'gut', adrenal: 'gland', gland: 'gland', thyroid: 'gland', pituitary: 'gland', pineal: 'gland', parathyroid: 'gland', mammary: 'gland',
+    uterus: 'organ', ovary: 'organ', testis: 'organ', prostate: 'gland', vagina: 'mucosa',
+    sclera: 'sclera', iris: 'iris', cornea: 'cornea', lens: 'glass', vitreous: 'glass', retina: 'membrane', choroid: 'organ', pupil: 'dark'
+  };
+  const TISSUE_BY_SYSTEM = { integumentary: 'skin', skeletal: 'bone', muscular: 'muscle', cardiovascular: 'vessel', respiratory: 'organ', digestive: 'gut', urinary: 'organ', reproductive: 'organ', nervous: 'nerve', endocrine: 'gland', lymphatic: 'lymph', sensory: 'generic' };
+  const colorIndex = {};
+  for (const k in H.COLORS) colorIndex[new THREE.Color(H.COLORS[k]).getHexString()] = k;
+  H.tissueForColor = function (c) { try { const key = colorIndex[new THREE.Color(c).getHexString()]; return key ? H.TISSUE_BY_COLOR[key] || null : null; } catch (e) { return null; } };
+  /* Guess the tissue of a part (the object stored in mesh.userData.part, or a viewer part record) from its material colour, tags, name and system. */
+  H.guessTissue = function (part, mat) {
+    const name = ((part && part.name) || '').toLowerCase(), id = ((part && part.id) || '').toLowerCase(), tags = (part && part.tags) || [];
+    const has = (s) => name.indexOf(s) >= 0 || id.indexOf(s) >= 0;
+    if (has('hair') || has('eyebrow') || has('eyelash')) return 'hair';
+    if (has('nail')) return 'nail';
+    if (has('lip') && !has('lipid')) return 'lip';
+    if (has('tooth') || has('teeth') || has('incisor') || has('canine') || has('molar')) return 'tooth';
+    if (has('cornea')) return 'cornea';
+    if (has('conjunctiva') || has('aqueous') || has('anterior chamber')) return 'film';
+    if (has('lens') || has('vitreous') || has('hyaloid')) return 'glass';
+    if (has('sclera')) return 'sclera';
+    if (has('iris')) return 'iris';
+    if (has('pupil')) return 'dark';
+    const fromColor = mat && mat.color ? H.tissueForColor(mat.color) : null;
+    if (fromColor) return fromColor;
+    if (tags.indexOf('skin') >= 0) return 'skin';
+    if (tags.indexOf('muscle') >= 0) return 'muscle';
+    if (has('tendon') || has('aponeurosis') || has('fascia') || has('ligament') || has('retinaculum') || has('capsule') || has('dura') || has('sheath')) return 'fascia';
+    if (has('cartilage') || has('disc') || has('meniscus')) return 'cartilage';
+    if (has('lung') || has('alveol') || has('bronch')) return 'lung';
+    if (has('liver') || has('hepat')) return 'liver';
+    if (has('brain') || has('cerebr') || has('cortex') || has('gyrus') || has('thalam') || has('hippocamp')) return 'brain';
+    if (has('membrane') || has('pleura') || has('peritoneum') || has('pericardium') || has('mening') || has('serosa')) return 'membrane';
+    if (has('fat') || has('adipose')) return 'fat';
+    if (has('mucosa') || has('tongue') || has('palate') || has('gum')) return 'mucosa';
+    if (part && part.system === 'nervous' && (part.layer === H.LAYER.ORGAN || part.region === 'head')) return has('nerve') ? 'nerve' : 'brain';
+    if (part && part.system === 'respiratory' && part.layer === H.LAYER.ORGAN) return 'lung';
+    if (part && part.system === 'cardiovascular' && has('heart')) return 'heart';
+    return (part && TISSUE_BY_SYSTEM[part.system]) || 'generic';
+  };
+  function tissueUniforms(pre) {
+    const c = pre.center || [0, 0, 0];
+    return {
+      uDetail: { value: new THREE.Vector4(pre.detail[0], pre.detail[1], pre.detail[2], pre.detail[3]) },
+      uMottle: { value: new THREE.Vector4(pre.mottle[0], pre.mottle[1], pre.mottle[2], pre.mottle[3]) },
+      uMottleTint: { value: new THREE.Vector3(pre.tint[0], pre.tint[1], pre.tint[2]) },
+      uMottleTint2: { value: new THREE.Vector3(pre.tint2[0], pre.tint2[1], pre.tint2[2]) },
+      uTone: { value: new THREE.Vector3(pre.tone[0], pre.tone[1], pre.tone[2]) },
+      uStria: { value: new THREE.Vector4(pre.stria[0], pre.stria[1], pre.stria[2], pre.stria[3]) },
+      uStriaCenter: { value: new THREE.Vector3(c[0], c[1], c[2]) },
+      uSSS: { value: new THREE.Vector4(pre.sss[0], pre.sss[1], pre.sss[2], pre.sss[3]) }
+    };
+  }
+  /* Apply a tissue preset to a material made by H.mat (physical properties + shader uniforms). Returns the material. */
+  H.setTissue = function (mat, name) {
+    const pre = H.TISSUES[name] || H.TISSUES.generic;
+    const ph = pre.phys, keep = pre.force ? {} : (mat.userData.keep || {});
+    if (mat.isMeshPhysicalMaterial) {
+      if (keep.roughness == null) mat.roughness = ph.roughness == null ? 0.5 : ph.roughness;
+      mat.clearcoat = ph.clearcoat || 0; mat.clearcoatRoughness = ph.clearcoatRoughness == null ? 0.4 : ph.clearcoatRoughness;
+      mat.sheen = ph.sheen || 0; mat.sheenRoughness = ph.sheenRoughness == null ? 0.7 : ph.sheenRoughness; if (ph.sheenColor) mat.sheenColor.set(ph.sheenColor);
+      mat.specularIntensity = ph.specularIntensity == null ? 0.5 : ph.specularIntensity; if (ph.ior) mat.ior = ph.ior;
+      // transparent tissue keeps a low, glassy roughness so it reads as a wet film
+      if (mat.transparent && mat.opacity < 0.7 && keep.roughness == null) mat.roughness = Math.min(mat.roughness, 0.3);
+      if (pre.opacity != null) { mat.opacity = Math.min(mat.opacity, pre.opacity); mat.transparent = true; mat.depthWrite = false; mat.userData.baseOpacity = mat.opacity; }
+    }
+    mat.atlasUniforms = tissueUniforms(pre);
+    mat.userData.tissue = name;
+    mat.needsUpdate = true;
+    return mat;
+  };
+  /* Clone a tissue material (three's clone drops onBeforeCompile), keeping the same preset and shared uniform objects. */
+  H.tissueClone = function (mat) {
+    const m = mat.clone();
+    if (mat.atlasUniforms) { m.atlasUniforms = mat.atlasUniforms; m.onBeforeCompile = tissueOnBeforeCompile; m.defines = Object.assign({}, mat.defines); }
+    m.userData.baseColor = mat.userData.baseColor; m.userData.baseOpacity = mat.userData.baseOpacity;
+    return m;
+  };
+  /* H.mat(color | {color, roughness, metalness, opacity, transparent, side, flatShading, emissive, emissiveIntensity, depthWrite, tissue}) */
   H.mat = function (c) {
     const o = (typeof c === 'string' || typeof c === 'number') ? { color: c } : (c || {});
-    const m = new THREE.MeshStandardMaterial({
-      color: new THREE.Color(o.color || '#cccccc'), roughness: o.roughness == null ? 0.6 : o.roughness, metalness: o.metalness || 0,
+    const m = new THREE.MeshPhysicalMaterial({
+      color: new THREE.Color(o.color || '#cccccc'), roughness: o.roughness == null ? 0.5 : o.roughness, metalness: o.metalness || 0,
       transparent: !!o.transparent || (o.opacity != null && o.opacity < 1), opacity: o.opacity == null ? 1 : o.opacity,
       side: o.side == null ? THREE.FrontSide : o.side, flatShading: !!o.flatShading, emissive: new THREE.Color(o.emissive || 0x000000), emissiveIntensity: o.emissiveIntensity == null ? 1 : o.emissiveIntensity
     });
     if (o.opacity != null && o.opacity < 1) m.depthWrite = o.depthWrite == null ? false : o.depthWrite;
+    m.defines = Object.assign({}, m.defines, { ATLAS_TISSUE: '', USE_UV: '' });   // keep three's STANDARD/PHYSICAL defines
+    m.onBeforeCompile = tissueOnBeforeCompile;
     m.userData.baseColor = m.color.getHex(); m.userData.baseOpacity = m.opacity;
+    m.userData.keep = { roughness: o.roughness != null && o.roughness <= 0.2 ? o.roughness : null };   // explicit glassy roughness is intentional
+    const t = o.tissue || H.tissueForColor(o.color || '#cccccc');
+    if (t) H.setTissue(m, t); else { m.atlasUniforms = tissueUniforms(H.TISSUES.generic); m.userData.tissue = null; }
     return m;
   };
 

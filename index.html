@@ -45,6 +45,7 @@
         <button class="btn small" type="button" data-sex="female" aria-pressed="false">Female</button>
       </div>
       <span class="sep" aria-hidden="true"></span>
+      <button class="btn small" type="button" id="btn-quality" aria-pressed="true" title="Realistic rendering: soft shadows, ambient occlusion and surface detail (Q)">Realistic</button>
       <button class="btn small" type="button" id="btn-ghost" aria-pressed="false" title="Draw peeled layers as faint shells (G)">Ghost</button>
       <button class="btn small" type="button" id="btn-labels" aria-pressed="false" title="Label visible structures (L)">Labels</button>
       <button class="btn small" type="button" id="btn-cut" aria-pressed="false" title="Cross-section plane">Cut</button>
@@ -88,10 +89,11 @@
         <li>Drag the depth slider to peel the body away layer by layer. Ghost keeps the peeled layers as faint shells.</li>
         <li>Cut slices the body along any axis; Focus jumps to an organ or region.</li>
         <li>Search by English or Latin name.</li>
+        <li>Realistic switches soft shadows, ambient occlusion and skin, muscle and organ surface detail on and off (faster on slower machines).</li>
       </ul>
       <div class="keys">
         <kbd>1</kbd>&ndash;<kbd>6</kbd> views &middot; <kbd>7</kbd> 3/4 &middot; <kbd>F</kbd> focus &middot; <kbd>H</kbd> hide &middot; <kbd>I</kbd> isolate &middot; <kbd>R</kbd> reset<br>
-        <kbd>[</kbd> <kbd>]</kbd> peel depth &middot; <kbd>G</kbd> ghost &middot; <kbd>L</kbd> labels &middot; <kbd>/</kbd> search &middot; <kbd>Esc</kbd> deselect
+        <kbd>[</kbd> <kbd>]</kbd> peel depth &middot; <kbd>G</kbd> ghost &middot; <kbd>L</kbd> labels &middot; <kbd>Q</kbd> realistic/fast &middot; <kbd>/</kbd> search &middot; <kbd>Esc</kbd> deselect
       </div>
     </div>
     <article class="panel-card" id="panel-card" hidden>
@@ -173,6 +175,7 @@
 <script src="systems/lymphatic.js" onerror="__atlasMissing('lymphatic')"></script>
 <script src="systems/eye.js" onerror="__atlasMissing('eye')"></script>
 <script src="systems/ear.js" onerror="__atlasMissing('ear')"></script>
+<script src="core/studio.js"></script>
 <script src="core/controls.js"></script>
 <script src="core/viewer.js"></script>
 <script>

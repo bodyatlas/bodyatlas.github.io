@@ -47,15 +47,16 @@
     if (!THREE) return fatal('Three.js did not load from cdnjs.cloudflare.com. Check the connection and reload.');
     if (!H || !L || !ANATOMY) return fatal('Core files (core/landmarks.js, core/helpers.js, core/registry.js) did not load.');
     if (!root.AtlasControls) return fatal('core/controls.js did not load.');
+    if (!root.AtlasStudio) return fatal('core/studio.js did not load.');
     let renderer;
     try {
-      renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false, powerPreference: 'high-performance' });
+      renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: 'high-performance' });
     } catch (e) { return fatal('WebGL is not available in this browser: ' + (e.message || e)); }
 
     // ------------------------------------------------------------------ elements
     const el = {
       stage: $('stage'), labels: $('labels'), tooltip: $('tooltip'), topbar: $('topbar'), search: $('search'), results: $('results'),
-      focusSelect: $('focus-select'), btnGhost: $('btn-ghost'), btnLabels: $('btn-labels'), btnCut: $('btn-cut'), btnReset: $('btn-reset'),
+      focusSelect: $('focus-select'), btnQuality: $('btn-quality'), btnGhost: $('btn-ghost'), btnLabels: $('btn-labels'), btnCut: $('btn-cut'), btnReset: $('btn-reset'),
       rail: $('rail'), panel: $('panel'), depthSlider: $('depth-slider'), depthFill: $('depth-fill'), depthThumb: $('depth-thumb'),
       depthTicks: $('depth-ticks'), depthValue: $('depth-value'), depthLegend: $('depth-legend'), systems: $('systems'), tones: $('tones'),
       panelEmpty: $('panel-empty'), panelCard: $('panel-card'), selName: $('sel-name'), selLatin: $('sel-latin'), selChips: $('sel-chips'),
@@ -74,40 +75,28 @@
     const tweenMs = () => (reduced() ? 0 : TWEEN_MS);
 
     // ------------------------------------------------------------------ renderer / scene
-    renderer.setPixelRatio(Math.min(2, root.devicePixelRatio || 1));
     renderer.localClippingEnabled = true;
     renderer.outputColorSpace = THREE.SRGBColorSpace;
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    renderer.toneMappingExposure = 1.1;
+    renderer.toneMappingExposure = 1.12;
     const canvas = renderer.domElement;
     canvas.setAttribute('aria-label', '3D anatomy stage');
     canvas.tabIndex = -1;
     el.stage.appendChild(canvas);
 
     const scene = new THREE.Scene();
-    scene.background = new THREE.Color('#efe9df');
+    scene.background = null;
     const camera = new THREE.PerspectiveCamera(40, 1, 0.01, 100);
     camera.position.set(1.6, 1.5, 2.4);
-
-    const hemi = new THREE.HemisphereLight(0xffffff, 0x8a8f99, 1.1);
-    const key = new THREE.DirectionalLight(0xfff3e4, 2.6); key.position.set(1.4, 2.4, 2.8);
-    const fill = new THREE.DirectionalLight(0xdbe6ff, 1.0); fill.position.set(-2.6, 1.0, 1.4);
-    const rim = new THREE.DirectionalLight(0xffffff, 1.3); rim.position.set(-0.6, 2.0, -2.9);
-    scene.add(hemi, key, fill, rim);
-
-    const groundMat = new THREE.ShaderMaterial({
-      uniforms: { color: { value: new THREE.Color(0.8, 0.75, 0.7) }, opacity: { value: 0.55 } },
-      vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
-      fragmentShader: 'varying vec2 vUv; uniform vec3 color; uniform float opacity; void main(){ float d = length(vUv - 0.5) * 2.0; float a = (1.0 - smoothstep(0.2, 1.0, d)) * opacity; gl_FragColor = vec4(color, a); }',
-      transparent: true, depthWrite: false
-    });
-    const ground = new THREE.Mesh(new THREE.CircleGeometry(1.15, 72), groundMat);
-    ground.rotation.x = -Math.PI / 2; ground.position.y = -0.004; ground.renderOrder = -1; ground.name = 'ground';
-    scene.add(ground);
+    const cutPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 1e5);
+    let quality = 'high';
+    try { const q = root.localStorage && root.localStorage.getItem('atlas-quality'); if (q === 'fast' || q === 'high') quality = q; else if (mqMobile && mqMobile.matches) quality = 'fast'; } catch (e) { /* ignore */ }
+    const studio = new root.AtlasStudio(renderer, scene, camera, { clippingPlanes: [cutPlane], quality });
+    quality = studio.quality;
 
     const bodyRoot = new THREE.Group(); bodyRoot.name = 'atlas-root'; scene.add(bodyRoot);
-    const cutPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 1e5);
     const raycaster = new THREE.Raycaster();
+    raycaster.layers.enableAll();   // transparent parts live on layer 1 (kept out of the AO pre-pass) but must stay pickable
 
     // ------------------------------------------------------------------ state
     const state = {
@@ -131,15 +120,15 @@
     function updateCameraClip() {
       const dist = Math.max(1e-4, camera.position.distanceTo(controls.target));
       const near = Math.max(0.0002, dist * 0.005), far = Math.max(25, dist * 60);
+      studio.aoRadius = Math.max(0.0012, Math.min(0.045, dist * 0.028));
       if (Math.abs(camera.near - near) > near * 0.05 || Math.abs(camera.far - far) > far * 0.05) { camera.near = near; camera.far = far; camera.updateProjectionMatrix(); }
     }
     function frame() {
       renderQueued = false;
       const moving = controls.update();
       updateCameraClip();
-      const t0 = performance.now();
-      renderer.render(scene, camera);
-      stats.frameMs = performance.now() - t0;
+      studio.render();
+      stats.frameMs = studio.frameMs;
       stats.calls = renderer.info.render.calls;
       updateLabels();
       updateStats();
@@ -154,10 +143,8 @@
     // ------------------------------------------------------------------ theme
     function readToken(name, fallback) { try { const v = getComputedStyle(doc.body).getPropertyValue(name).trim(); return v || fallback; } catch (e) { return fallback; } }
     function applyTheme() {
-      const bg = readToken('--stage-bg', '#efe9df'), gr = readToken('--stage-ground', '#ddd3c4');
-      try { scene.background.set(bg); } catch (e) { scene.background.set('#efe9df'); }
-      try { groundMat.uniforms.color.value.set(gr).convertLinearToSRGB(); } catch (e) { /* keep */ }
-      hemi.groundColor.copy(scene.background).lerp(new THREE.Color(0x888888), 0.5);
+      const bg = readToken('--stage-bg', '#efe9df'), bg2 = readToken('--stage-bg-bottom', bg), gr = readToken('--stage-ground', '#ddd3c4');
+      try { studio.setBackdrop(bg, bg2, gr); } catch (e) { studio.setBackdrop('#efe9df', '#e2d9cb', '#ddd3c4'); }
       requestRender();
     }
     if (mqDark) addMq(mqDark, applyTheme);
@@ -166,7 +153,7 @@
     // ------------------------------------------------------------------ resize
     function resize() {
       const w = el.stage.clientWidth || root.innerWidth || 800, h = el.stage.clientHeight || root.innerHeight || 600;
-      renderer.setSize(w, h, false);
+      studio.setSize(w, h, root.devicePixelRatio || 1);
       camera.aspect = w / h; camera.updateProjectionMatrix();
       const tb = el.topbar ? el.topbar.offsetHeight : 46;
       doc.documentElement.style.setProperty('--top', (tb + 20) + 'px');
@@ -200,7 +187,7 @@
       const keyId = p.baseMat.uuid + ':' + mode;
       let m = hlCache.get(keyId);
       if (!m) {
-        m = p.baseMat.clone();
+        m = H.tissueClone ? H.tissueClone(p.baseMat) : p.baseMat.clone();
         if (m.emissive) { m.emissive.setHex(ACCENT_HEX); m.emissiveIntensity = mode === 'select' ? 0.55 : 0.32; }
         if (m.color) m.color.lerp(new THREE.Color(0xffffff), mode === 'select' ? 0.12 : 0.06);
         if (m.transparent && m.opacity < 1) m.opacity = Math.min(1, m.opacity + 0.25);
@@ -241,6 +228,10 @@
         let mat = Array.isArray(o.material) ? o.material[0] : o.material;
         if (!mat) { mat = H.mat(H.SYSTEMS[pd.system] ? H.SYSTEMS[pd.system].color : '#cccccc'); }
         o.material = mat; registerMaterial(mat);
+        if (mat.isMeshPhysicalMaterial && !mat.userData.tissue && H.setTissue) H.setTissue(mat, H.guessTissue(pd, mat));
+        const solid = !(mat.transparent && mat.opacity < 0.7);
+        const inset = (pd.tags || []).indexOf('inset') >= 0 || /^(inset-|skinblock)/.test(String(pd.id));   // magnified insets float beside the body: no floor shadow
+        o.castShadow = solid && !inset; o.receiveShadow = true; o.layers.set(solid ? 0 : 1);
         const g = o.geometry;
         if (!g.boundingSphere) g.computeBoundingSphere();
         if (!g.boundingBox) g.computeBoundingBox();
@@ -253,7 +244,7 @@
         const p = {
           id: String(pd.id), name: pd.name || pd.id, latin: pd.latin || '', system: pd.system, layer: +pd.layer || 1, depth: +pd.depth || 0,
           side: pd.side || 'M', region: pd.region || 'body', info: pd.info || {}, parent: pd.parent || null, tags: pd.tags || [], module: moduleId,
-          mesh: o, baseMat: mat, box, sphere: { center, radius: Math.max(radius, 1e-4) }, tris, visible: false, ghosted: false
+          mesh: o, baseMat: mat, box, sphere: { center, radius: Math.max(radius, 1e-4) }, tris, visible: false, ghosted: false, solid, shadow: solid && !inset
         };
         p.peel = p.layer + p.depth;
         p.lname = p.name.toLowerCase(); p.llatin = p.latin.toLowerCase(); p.lid = p.id.toLowerCase();
@@ -274,6 +265,7 @@
       for (const p of parts) b.union(p.box);
       if (b.isEmpty()) b.set(new THREE.Vector3(...L.region.body.min), new THREE.Vector3(...L.region.body.max));
       bodyBox = b;
+      studio.fitShadow(b);
       applySkinTone();
     }
 
@@ -336,9 +328,9 @@
         const peeled = !iso && p.peel < state.depth;
         if (!show) { m.visible = false; p.visible = false; p.ghosted = false; }
         else if (peeled) {
-          if (state.ghost) { m.visible = true; m.material = ghostFor(p); p.visible = false; p.ghosted = true; }
+          if (state.ghost) { m.visible = true; m.material = ghostFor(p); p.visible = false; p.ghosted = true; m.castShadow = false; m.layers.set(1); }
           else { m.visible = false; p.visible = false; p.ghosted = false; }
-        } else { m.visible = true; p.visible = true; p.ghosted = false; m.material = materialFor(p); pickables.push(m); vis++; tris += p.tris; }
+        } else { m.visible = true; p.visible = true; p.ghosted = false; m.material = materialFor(p); m.castShadow = p.shadow; m.layers.set(p.solid ? 0 : 1); pickables.push(m); vis++; tris += p.tris; }
       }
       stats.visible = vis; stats.triangles = tris;
       if (state.hovered && !(byId.get(state.hovered) || {}).visible) setHovered(null);
@@ -501,7 +493,7 @@
     function updateStats() {
       if (!el.stats) return;
       const mods = state.loaded.length + '/' + moduleIds().length;
-      el.stats.textContent = stats.visible + '/' + parts.length + ' parts  ' + fmt(stats.triangles) + ' tris  ' + stats.calls + ' calls  ' + stats.frameMs.toFixed(1) + ' ms  ' + mods + ' modules';
+      el.stats.textContent = stats.visible + '/' + parts.length + ' parts  ' + fmt(stats.triangles) + ' tris  ' + stats.calls + ' calls  ' + stats.frameMs.toFixed(1) + ' ms  ' + mods + ' modules  ' + (quality === 'high' ? 'realistic' : 'fast');
     }
 
     // ------------------------------------------------------------------ UI: depth slider
@@ -728,6 +720,7 @@
       else if (b.dataset.sex) api.setSex(b.dataset.sex);
     });
     el.btnGhost.addEventListener('click', () => api.setGhost(!state.ghost));
+    if (el.btnQuality) el.btnQuality.addEventListener('click', () => api.setQuality(quality === 'high' ? 'fast' : 'high'));
     el.btnLabels.addEventListener('click', () => api.setLabels(!state.labels));
     el.btnCut.addEventListener('click', () => { if (state.cut.axis === 'off') api.setCut('x', 0.5, false); else api.setCut('off'); });
     el.btnReset.addEventListener('click', () => api.reset());
@@ -738,6 +731,7 @@
     function updateTopbar() {
       for (const b of el.topbar.querySelectorAll('[data-sex]')) b.setAttribute('aria-pressed', b.dataset.sex === state.sex ? 'true' : 'false');
       el.btnGhost.setAttribute('aria-pressed', state.ghost ? 'true' : 'false');
+      if (el.btnQuality) { el.btnQuality.setAttribute('aria-pressed', quality === 'high' ? 'true' : 'false'); el.btnQuality.disabled = !studio.supportsPost; el.btnQuality.title = studio.supportsPost ? 'Realistic rendering: soft shadows, ambient occlusion and surface detail (Q)' : 'Realistic rendering needs WebGL 2'; }
       el.btnLabels.setAttribute('aria-pressed', state.labels ? 'true' : 'false');
       el.btnCut.setAttribute('aria-pressed', state.cut.axis !== 'off' ? 'true' : 'false');
       el.cutbar.hidden = state.cut.axis === 'off';
@@ -782,6 +776,7 @@
       else if (k === 'i') { if (state.isolated) api.showAll(); else if (state.selected) api.isolate(state.selected); }
       else if (k === 'r') api.reset();
       else if (k === 'g') api.setGhost(!state.ghost);
+      else if (k === 'q') api.setQuality(quality === 'high' ? 'fast' : 'high');
       else if (k === 'l') api.setLabels(!state.labels);
       else if (k === '[') api.setDepth(state.depth - 0.5);
       else if (k === ']') api.setDepth(state.depth + 0.5);
@@ -853,6 +848,12 @@
       updateTopbar(); requestRender();
       return Object.assign({}, state.cut);
     };
+    api.setQuality = function (q) {
+      quality = studio.setQuality(q);
+      try { if (root.localStorage) root.localStorage.setItem('atlas-quality', quality); } catch (e) { /* ignore */ }
+      resize(); updateTopbar(); requestRender(); return quality;
+    };
+    api.getQuality = () => quality;
     api.setGhost = function (on) { state.ghost = !!on; updateTopbar(); applyVisibility(); return state.ghost; };
     api.setLabels = function (on) { state.labels = !!on; updateTopbar(); requestRender(); return state.labels; };
     api.hide = function (id) { if (!byId.has(id)) return false; state.hidden.add(id); if (state.selected === id) renderSelection(); applyVisibility(); return true; };
@@ -879,7 +880,7 @@
       parts: parts.length, visible: stats.visible, triangles: Math.round(stats.triangles), totalTriangles: Math.round(stats.totalTriangles),
       drawCalls: stats.calls, frameMs: +stats.frameMs.toFixed(2), modules: state.loaded.slice(), failed: state.failed.map(f => Object.assign({}, f)),
       depth: state.depth, sex: state.sex, ghost: state.ghost, labels: state.labels, cut: Object.assign({}, state.cut), selected: state.selected,
-      building: state.building, hovered: state.hovered
+      building: state.building, hovered: state.hovered, quality
     });
     api.busy = () => state.building || renderQueued || controls.isMoving();
     api.whenIdle = () => new Promise((res) => {
@@ -888,6 +889,7 @@
       check();
     });
     api.render = requestRender;
+    api.scene = scene; api.camera = camera; api.studio = studio;   // for debugging and tests
     api.SKIN_TONES = SKIN_TONES.map(t => Object.assign({}, t));
     api.FOCUS_MENU = FOCUS_MENU.map(e => e[0]);
 
@@ -904,7 +906,7 @@
       } else if (el.modulesNote) el.modulesNote.textContent = 'All ' + state.loaded.length + ' modules loaded.';
       if (!parts.length) showNotice('No anatomy modules could be loaded, so the stage is empty.', true);
       updateCameraClip();
-      renderer.render(scene, camera);
+      studio.render();
       stats.calls = renderer.info.render.calls; updateStats();
       if (el.loading) { el.loading.classList.add('done'); setTimeout(() => { el.loading.hidden = true; }, reduced() ? 0 : 420); }
       api.ready = true;
