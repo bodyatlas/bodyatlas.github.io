@@ -1,0 +1,64 @@
+name: Clausery CI
+
+on:
+  push:
+    branches: [main]
+    paths: ['clausery/**', '.github/workflows/clausery.yml']
+  pull_request:
+    paths: ['clausery/**', '.github/workflows/clausery.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: clausery-${{ github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    working-directory: clausery
+
+jobs:
+  verify:
+    name: Lint, unit tests, static checks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: clausery/package-lock.json
+      - run: npm ci
+      - run: npm run lint
+      - run: npm test
+      - run: npm run check:html
+      - name: Vendored bundles and generated pages are up to date
+        run: |
+          npm run build:vendor
+          npm run build:site
+          git diff --exit-code -- vendor/ app/lib/versions.js '*.html' || (echo "Run npm run build and commit the result." && exit 1)
+
+  e2e:
+    name: End-to-end (Chromium)
+    runs-on: ubuntu-latest
+    needs: verify
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: clausery/package-lock.json
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:e2e
+        env:
+          CI: 1
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-report
+          path: clausery/playwright-report
+          retention-days: 7

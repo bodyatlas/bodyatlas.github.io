@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Logic &amp; calculations · Clausery</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="The Clausery expression language: operators, functions for text, numbers, money and dates, and how to use it in show-when rules and computed fields.">
+<link rel="canonical" href="https://bodyatlas.github.io/clausery/docs/logic.html">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Clausery">
+<meta property="og:title" content="Logic &amp; calculations · Clausery">
+<meta property="og:description" content="The Clausery expression language: operators, functions for text, numbers, money and dates, and how to use it in show-when rules and computed fields.">
+<meta property="og:url" content="https://bodyatlas.github.io/clausery/docs/logic.html">
+<meta property="og:image" content="https://bodyatlas.github.io/clausery/assets/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="theme-color" content="#1b2a41">
+<meta name="referrer" content="strict-origin-when-cross-origin">
+<link rel="icon" href="../assets/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="../assets/icon-192.png">
+<link rel="manifest" href="../app/manifest.webmanifest">
+<link rel="stylesheet" href="../site.css">
+<script src="../app/theme.js"></script>
+
+</head>
+<body>
+<a class="sr-only" href="#main">Skip to content</a>
+<header class="site-header">
+  <div class="wrap">
+    <a class="brand" href="../"><img src="../assets/icon.svg" alt="" width="30" height="30"> Clausery</a>
+    <button class="menu-btn" type="button" aria-expanded="false" aria-controls="site-nav" onclick="var n=document.getElementById('site-nav');var o=n.classList.toggle('open');this.setAttribute('aria-expanded',o)">Menu</button>
+    <nav class="site-nav" id="site-nav" aria-label="Site">
+      <a href="../#features">Features</a>
+      <a href="../pricing/">Pricing</a>
+      <a href="../docs/" aria-current="page">Docs</a>
+      <a href="../docs/security.html">Security</a>
+      <a class="btn btn-primary" href="../app/">Open the app</a>
+    </nav>
+  </div>
+</header>
+<main id="main" tabindex="-1">
+<div class="wrap docs"><nav class="docs-nav" aria-label="Documentation"><h4>Start here</h4><a href="../docs/">Getting started</a><a href="../docs/templates.html">Template syntax</a><a href="../docs/questionnaire.html">Designing the questionnaire</a><a href="../docs/logic.html" aria-current="page">Logic & calculations</a><h4>Working with clients</h4><a href="../docs/intake.html">Client intake forms</a><a href="../docs/teams.html">Teams & template packs</a><a href="../docs/backups.html">Backups & data</a><h4>Trust</h4><a href="../docs/security.html">Security</a><a href="../docs/self-hosting.html">Self-hosting</a><a href="../docs/faq.html">FAQ</a></nav><article class="docs-body">
+<h1>Logic &amp; calculations</h1>
+<p class="lead">One small expression language is used for <em>Show only when</em> rules, computed fields and computed conditions. It is deliberately simple and safe: no code runs, only these operators and functions.</p>
+<h2>Values</h2>
+<p>Answers are referred to by their tag name: <code>salary</code>, <code>has_bonus</code>, <code>start_date</code>. Inside a repeating group, the item's own fields come first, then top-level answers. Literals: numbers <code>12</code>, <code>0.2</code>; text <code>"flat"</code>; <code>true</code>, <code>false</code>, <code>null</code>; lists <code>["CA", "NY"]</code>.</p>
+<h2>Operators</h2>
+<table><thead><tr><th>Operators</th><th>Notes</th></tr></thead><tbody>
+<tr><td><code>+ - * / %</code></td><td>Arithmetic. <code>+</code> joins text when either side is text.</td></tr>
+<tr><td><code>== != &lt; &lt;= &gt; &gt;=</code></td><td>Comparison. Numbers typed as text compare as numbers.</td></tr>
+<tr><td><code>and or not</code> (also <code>&amp;&amp; || !</code>)</td><td>Logic. Empty text, 0, <code>false</code>, <code>null</code> and empty lists count as false.</td></tr>
+<tr><td><code>x in ["a", "b"]</code></td><td>Membership.</td></tr>
+<tr><td><code>items.rate</code></td><td>The list of one field across a repeating group.</td></tr>
+</tbody></table>
+<h2>Functions</h2>
+<table><thead><tr><th>Function</th><th>Example → result</th></tr></thead><tbody>
+<tr><td><code>upper, lower, title, trim</code></td><td><code>title("jane doe")</code> → Jane Doe</td></tr>
+<tr><td><code>concat(a, b, …)</code></td><td><code>concat(first_name, " ", last_name)</code></td></tr>
+<tr><td><code>len(x), count(list)</code></td><td><code>count(attorneys)</code> → 3</td></tr>
+<tr><td><code>join(list, sep)</code></td><td><code>join(parties.name, "; ")</code></td></tr>
+<tr><td><code>sum(list), sum(list, "field")</code></td><td><code>sum(items.amount)</code></td></tr>
+<tr><td><code>min, max, round(x, d), floor, ceil, abs</code></td><td><code>round(total * 1.2, 2)</code></td></tr>
+<tr><td><code>if(cond, a, b)</code></td><td><code>if(count(attorneys) &gt; 1, "attorneys", "attorney")</code></td></tr>
+<tr><td><code>coalesce(a, b, …)</code></td><td>First non-empty value</td></tr>
+<tr><td><code>contains(list, x), empty(x)</code></td><td><code>contains(states, "CA")</code></td></tr>
+<tr><td><code>plural(n, "day")</code>, <code>plural(n, "party", "parties")</code></td><td><code>plural(term_years, "year")</code> → years</td></tr>
+<tr><td><code>words(n)</code></td><td><code>words(1250)</code> → one thousand two hundred and fifty</td></tr>
+<tr><td><code>format_number(x, decimals)</code>, <code>format_money(x, "EUR")</code></td><td><code>format_money(sum(items.amount), "USD")</code> → $12,500.00</td></tr>
+<tr><td><code>today()</code></td><td>Today's date</td></tr>
+<tr><td><code>format_date(d, "long")</code></td><td>Styles: long, medium, short, full, iso</td></tr>
+<tr><td><code>add_days, add_months, add_years</code></td><td><code>add_days(signed_on, 30)</code></td></tr>
+<tr><td><code>days_between(a, b), years_between(a, b), year(d)</code></td><td><code>years_between(dob, today())</code> → age</td></tr>
+<tr><td><code>number(x), string(x)</code></td><td>Conversions</td></tr>
+</tbody></table>
+<h2>Computed fields</h2>
+<p>Add a computed field in the designer (Pro), give it a tag name and an expression, and choose how it is shown in the document: text, number, money, date or yes/no. Use its tag in the Word document like any other: <code>{total_fee}</code>. Computed fields can use other computed fields; circular references are reported.</p>
+<h3>Examples</h3>
+<pre tabindex="0"><code>total_fee          sum(attorneys.rate) * estimated_hours
+term_end           add_years(effective_date, term_years)
+salary_in_words    words(salary) + " dollars"
+notice_period      if(years_of_service &gt; 5, "three months", "one month")
+parties_list       join(parties.name, ", ")</code></pre>
+<h2>Computed conditions</h2>
+<p>A section can be controlled by an expression instead of a checkbox. Select the yes/no question created for the section, change its type to <em>Computed</em>, and enter for example <code>salary &gt; 100000 and is_executive</code>. The section renders when the expression is true.</p>
+<h2>Errors</h2>
+<p>Mistyped expressions are flagged in the designer with the position of the problem. At interview time, an expression that cannot be evaluated shows an error under its field and renders blank; it never blocks generation.</p></article></div></main>
+<footer class="site-footer">
+  <div class="wrap">
+    <div>
+      <h4>Clausery</h4>
+      <p>Document automation that never leaves your browser. Turn your own Word templates into guided questionnaires and generate finished documents, offline, with no account.</p>
+    </div>
+    <div>
+      <h4>Product</h4>
+      <a href="../app/">Open the app</a>
+      <a href="../pricing/">Pricing</a>
+      <a href="../changelog.html">Changelog</a>
+      <a href="../docs/self-hosting.html">Self-hosting</a>
+    </div>
+    <div>
+      <h4>Docs</h4>
+      <a href="../docs/">Getting started</a>
+      <a href="../docs/templates.html">Template syntax</a>
+      <a href="../docs/logic.html">Logic &amp; calculations</a>
+      <a href="../docs/intake.html">Client intake</a>
+      <a href="../docs/security.html">Security</a>
+    </div>
+    <div>
+      <h4>Legal</h4>
+      <a href="../legal/privacy.html">Privacy</a>
+      <a href="../legal/terms.html">Terms</a>
+      <a href="../legal/dpa.html">Data processing</a>
+      <a href="mailto:hello@clausery.app">Contact</a>
+    </div>
+    <div class="legal">© 2026 Clausery. Clausery is software, not legal advice; documents you generate are your responsibility. Not affiliated with Microsoft; Word is a trademark of Microsoft Corporation.</div>
+  </div>
+</footer>
+</body>
+</html>

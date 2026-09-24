@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en" data-theme="system">
+<head>
+<meta charset="utf-8">
+<title>Clausery App</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="Clausery workspace: your templates and drafts, stored only in this browser.">
+<meta name="robots" content="noindex">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self'; worker-src 'self'; object-src 'none'; base-uri 'self'; form-action 'none'">
+<meta name="referrer" content="no-referrer">
+<meta name="theme-color" content="#1b2a41">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="../assets/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="../assets/icon-192.png">
+<link rel="stylesheet" href="styles.css">
+<script src="theme.js"></script>
+</head>
+<body>
+<a class="sr-only" href="#main">Skip to content</a>
+<div class="app" id="app">
+  <header class="topbar">
+    <a class="brand" href="../" aria-label="Clausery home"><img src="../assets/icon.svg" alt="" width="26" height="26"> Clausery</a>
+    <span class="spacer"></span>
+    <div class="status" id="status" aria-live="polite"></div>
+  </header>
+  <nav class="sidenav" id="nav" aria-label="Main">
+    <a href="#/templates" data-nav="templates"><span class="nav-icon"></span><span class="nav-text">Templates</span></a>
+    <a href="#/drafts" data-nav="drafts"><span class="nav-icon"></span><span class="nav-text">Drafts</span></a>
+    <a href="#/settings" data-nav="settings"><span class="nav-icon"></span><span class="nav-text">Settings</span></a>
+    <a href="../docs/" data-nav="docs" target="_blank" rel="noopener"><span class="nav-icon"></span><span class="nav-text">Docs</span></a>
+    <div class="nav-foot">Everything stays in this browser.<br><span id="nav-version"></span></div>
+  </nav>
+  <main class="main" id="main" tabindex="-1"></main>
+</div>
+<noscript><div class="notice notice-warn" style="margin:1rem">Clausery runs entirely in your browser and needs JavaScript enabled.</div></noscript>
+<script type="module" src="main.js"></script>
+</body>
+</html>

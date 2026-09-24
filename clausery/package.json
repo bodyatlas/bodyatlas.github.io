@@ -1,0 +1,38 @@
+{
+  "name": "clausery",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Clausery: browser-only document automation. Turn your own Word templates into guided questionnaires and generate finished documents without any data leaving the machine.",
+  "type": "module",
+  "scripts": {
+    "build:vendor": "node tools/build-vendor.mjs",
+    "build:samples": "node tools/make-samples.mjs",
+    "build:sitemap": "node tools/make-sitemap.mjs",
+    "build": "npm run build:vendor && npm run build:samples && npm run build:site && npm run build:sitemap",
+    "lint": "eslint .",
+    "test": "node --test 'tests/unit/*.test.mjs'",
+    "test:e2e": "playwright test",
+    "check:html": "node tools/check-html.mjs",
+    "serve": "node tools/serve.mjs",
+    "screenshots": "node tools/screenshots.mjs",
+    "license": "node tools/license.mjs",
+    "verify": "npm run lint && npm run check:html && npm test",
+    "build:site": "node tools/build-site.mjs",
+    "smoke": "node tools/smoke.mjs"
+  },
+  "devDependencies": {
+    "@axe-core/playwright": "^4.10.2",
+    "@eslint/js": "^10.0.1",
+    "@playwright/test": "^1.56.1",
+    "docx": "^9.5.1",
+    "docx-preview": "^0.4.1",
+    "docxtemplater": "^3.71.0",
+    "esbuild": "^0.28.2",
+    "eslint": "^10.11.0",
+    "jszip": "^3.10.2",
+    "pizzip": "^3.3.0"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

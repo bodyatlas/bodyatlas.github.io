@@ -11,3 +11,7 @@ Interactive 3D human anatomy you can peel from skin to bone: every body system, 
 Every structure is generated procedurally with [Three.js](https://threejs.org) (r160, loaded from cdnjs) from a shared anatomical landmark set in `core/landmarks.js`; each body system is one module in `systems/`. It is a static site with no build step: serve the folder and open `index.html`.
 
 The models are simplified illustrations for learning, not medical-grade scans.
+
+---
+
+This repository also hosts **[Clausery](https://bodyatlas.github.io/clausery/)**, an unrelated project: browser-only document automation for law firms, HR and consultancies. It lives entirely in the [`clausery/`](clausery/) folder and has its own README, tests and CI.
