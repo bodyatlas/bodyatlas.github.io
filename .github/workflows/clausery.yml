@@ -66,3 +66,23 @@ jobs:
           name: playwright-report
           path: clausery/playwright-report
           retention-days: 7
+
+  indexnow:
+    name: Notify search engines (IndexNow)
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    needs: [verify, e2e]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Wait for GitHub Pages to publish this commit
+        run: |
+          key=$(ls *.txt | grep -E '^[0-9a-f]{32}\.txt$' | head -1)
+          for i in $(seq 1 30); do
+            if curl -fsS "https://bodyatlas.github.io/clausery/$key" -o /dev/null; then echo "key file is live"; exit 0; fi
+            sleep 10
+          done
+          echo "key file not live yet; submitting anyway (IndexNow verifies it later)"
+      - run: npm run indexnow
