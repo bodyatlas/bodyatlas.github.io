@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 
-const PAGES = ['', 'pricing/', 'docs/', 'docs/templates.html', 'docs/security.html', 'legal/privacy.html', '404.html', 'templates/', 'templates/statement-of-work.html', 'compare/gavel-alternative.html', 'for/law-firms.html', 'guides/automate-word-templates.html', 'free-tools/amount-in-words.html', 'free-tools/deadline-calculator.html', 'free-tools/template-checker.html', 'press/'];
+const PAGES = ['', 'pricing/', 'docs/', 'docs/templates.html', 'docs/security.html', 'legal/privacy.html', '404.html', 'templates/', 'templates/statement-of-work.html', 'compare/gavel-alternative.html', 'for/law-firms.html', 'guides/automate-word-templates.html', 'free-tools/amount-in-words.html', 'free-tools/deadline-calculator.html', 'free-tools/template-checker.html', 'press/', 'clauses/', 'clauses/indemnification-clause.html', 'guides/what-to-include-in-an-nda.html'];
 for (const p of PAGES) {
   test(`site page ${p || 'home'} renders and has no serious accessibility violations`, async ({ page }) => {
     const res = await page.goto(p);
@@ -52,4 +52,15 @@ test('free tools work in the page', async ({ page }) => {
   await expect(page.locator('#report')).toContainText('No problems found');
   await expect(page.locator('#report table tbody tr')).toHaveCount(15);
   await expect(page.locator('#report')).toContainText('For each item: Name, Role, Rate');
+});
+
+test('clause pages copy the sample wording', async ({ page, context }) => {
+  await context.grantPermissions(['clipboard-read', 'clipboard-write']);
+  await page.goto('clauses/force-majeure-clause.html');
+  await page.click('.copy-btn');
+  await expect(page.locator('.copy-status')).toHaveText('Copied to the clipboard.');
+  const text = await page.evaluate(() => navigator.clipboard.readText());
+  expect(text).toMatch(/^Neither party shall be in breach/);
+  expect(text).toContain('\n\nThe affected party shall promptly notify');
+  await expect(page.locator('a[href="../templates/service-agreement.html"]')).toBeVisible();
 });

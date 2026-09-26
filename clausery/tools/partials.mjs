@@ -25,6 +25,7 @@ export function head({ title, description, path, extraHead = '', ogImage = 'asse
 <link rel="icon" href="${rel}assets/icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="${rel}assets/icon-192.png">
 <link rel="manifest" href="${rel}app/manifest.webmanifest">
+<link rel="alternate" type="application/atom+xml" title="Clausery guides and clause library" href="${rel}feed.xml">
 <link rel="stylesheet" href="${rel}site.css">
 <script src="${rel}app/theme.js"></script>
 <script src="${rel}site.js" defer></script>
@@ -73,6 +74,7 @@ export function footer(rel) {
       <h4>Resources</h4>
       <a href="${rel}templates/">Free templates</a>
       <a href="${rel}guides/">Guides</a>
+      <a href="${rel}clauses/">Clause library</a>
       <a href="${rel}free-tools/">Free tools</a>
       <a href="${rel}compare/">Compare</a>
       <a href="${rel}for/law-firms.html">For law firms</a>

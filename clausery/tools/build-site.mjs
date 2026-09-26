@@ -18,6 +18,69 @@ for (const p of pages) {
   console.log('wrote', out);
 }
 
+// Atom feed of guides and clause pages (pages marked `feed: true`), for feed readers and aggregators. Dates come from
+// each page's `published` field, never the build time, so rebuilding does not make every entry look new.
+const BASE = 'https://bodyatlas.github.io/clausery/';
+const xmlEsc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const feed = pages.filter((p) => p.feed).sort((a, b) => (b.published + b.path).localeCompare(a.published + a.path));
+const updated = feed.map((p) => p.published).sort().at(-1);
+writeFileSync('feed.xml', `<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+  <title>Clausery: guides and clause library</title>
+  <subtitle>Practical guides to drafting and automating documents, and plain-English explanations of contract clauses.</subtitle>
+  <link rel="self" href="${BASE}feed.xml"/>
+  <link rel="alternate" href="${BASE}"/>
+  <id>${BASE}</id>
+  <updated>${updated}T00:00:00Z</updated>
+  <author><name>Clausery</name></author>
+${feed.map((p) => `  <entry>
+    <title>${xmlEsc(p.title)}</title>
+    <link href="${BASE}${p.path}"/>
+    <id>${BASE}${p.path}</id>
+    <updated>${p.published}T00:00:00Z</updated>
+    <summary>${xmlEsc(p.description)}</summary>
+  </entry>`).join('\n')}
+</feed>
+`);
+console.log(`wrote feed.xml (${feed.length} entries)`);
+
+// llms.txt (llmstxt.org): a plain summary and link map for AI assistants and answer engines.
+const section = (prefix) => pages.filter((p) => p.path.startsWith(prefix) && !p.path.endsWith('/')).map((p) => `- [${p.title}](${BASE}${p.path}): ${p.description}`).join('\n');
+writeFileSync('llms.txt', `# Clausery
+
+> Clausery is browser-based document automation. It turns ordinary Word (.docx) templates with {tags} into guided questionnaires and generates finished documents entirely on the user's device: no upload, no account, works offline. Free for up to three templates with unlimited documents; the Pro plan adds unlimited templates, calculations, an encrypted workspace and client intake forms.
+
+Key facts:
+- Documents are assembled in the browser; template files, answers and generated documents are never sent to a server.
+- Templates are normal Word files. Tags: {name} for a value, {#condition}...{/condition} for optional text, {^condition}...{/condition} for the opposite, and {#list}...{/list} for repeating paragraphs or table rows.
+- Pro plan: optional passphrase encryption of everything stored in the browser (AES-256-GCM) with auto-lock.
+- Free Word templates, a contract clause library and free drafting tools are available without sign-up.
+- Clausery is software, not a law firm, and does not give legal advice.
+
+## Product
+- [Home](${BASE}): what Clausery does and who it is for
+- [Open the app](${BASE}app/): runs in the browser, no sign-up
+- [Pricing](${BASE}pricing/): Free, Pro, Team and Enterprise plans
+- [Security](${BASE}docs/security.html): how data stays on the device
+- [Documentation](${BASE}docs/): getting started, template syntax, logic, client intake
+
+## Free Word templates
+${section('templates/')}
+
+## Contract clause library
+${section('clauses/')}
+
+## Guides
+${section('guides/')}
+
+## Free tools
+${section('free-tools/')}
+
+## Comparisons
+${section('compare/')}
+`);
+console.log('wrote llms.txt');
+
 // GitHub Pages serves only the 404.html at the repository root, for every missing URL on the whole site. The root also
 // hosts an unrelated project, so this page is neutral, self-contained (inline CSS, absolute links) and links to both.
 writeFileSync('../404.html', `<!doctype html>

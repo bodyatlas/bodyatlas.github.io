@@ -146,6 +146,110 @@ GUARANTEE
 <h2>How Clausery answers these</h2>
 <p>Clausery was designed so that most of these questions have a short answer: documents are built in your browser and stored on your device, so there is no vendor server holding client data, no sub-processor for your content and nothing to breach on our side. Your templates are ordinary Word files and your data exports are plain JSON. The details, including what the web host can see, are in the <a href="${rel}docs/security.html">security overview</a> and the <a href="${rel}legal/dpa.html">data processing statement</a>.</p>
 <p class="small muted">This checklist is general information, not legal advice. Your professional rules and data protection obligations depend on your jurisdiction.</p>` },
+  { slug: 'how-to-write-an-offer-letter', title: 'How to write a job offer letter (with a free template)',
+    description: 'What to put in a job offer letter: role, start date, pay, bonus, equity, benefits, conditions and at-will wording, plus the mistakes that cause disputes later.',
+    body: (rel) => `
+<p class="lead">An offer letter turns a verbal "we'd love to have you" into something the candidate can accept. It should be short, clear and consistent with the contract and policies that follow it.</p>
+<h2>What to include</h2>
+<ol>
+  <li><strong>The role.</strong> Job title, who they report to, and whether the job is full-time or part-time.</li>
+  <li><strong>Where they will work.</strong> Office, hybrid or remote. If remote, say whether they must live in a particular country or state, which affects tax and employment law.</li>
+  <li><strong>Start date.</strong> A specific date, or "on a date to be agreed" if it depends on a notice period.</li>
+  <li><strong>Pay.</strong> Base salary or hourly rate, the pay period, and whether the role is exempt from overtime where that applies.</li>
+  <li><strong>Variable pay.</strong> Bonus target and whether it is discretionary. Equity: number of options or units, vesting schedule and cliff, and that the grant is subject to board approval and the plan documents.</li>
+  <li><strong>Benefits and time off.</strong> A short list, pointing to the plan documents rather than restating them.</li>
+  <li><strong>Conditions.</strong> Background checks, references, right-to-work checks, signing a confidentiality and invention assignment agreement.</li>
+  <li><strong>How to accept, and by when.</strong> An expiry date keeps the process moving.</li>
+</ol>
+<h2>Wording that causes problems later</h2>
+<ul>
+  <li><strong>Annual salary described as a guarantee.</strong> "Your salary will be $90,000 per year" can be read as a promise of a year's employment. Stating the pay period avoids that.</li>
+  <li><strong>"Permanent position" or "job security".</strong> In the US these can undermine <a href="${rel}clauses/at-will-employment-clause.html">at-will employment</a>. Outside the US, the letter should mention notice and the full contract.</li>
+  <li><strong>Equity promises without conditions.</strong> Always make grants subject to approval and the plan.</li>
+  <li><strong>Terms that conflict with the employment contract.</strong> If a contract follows, say which document prevails.</li>
+</ul>
+<h2>Restrictive covenants</h2>
+<p>If the job comes with a <a href="${rel}clauses/non-compete-clause.html">non-compete</a> or <a href="${rel}clauses/non-solicitation-clause.html">non-solicitation</a> restriction, mention it in the offer letter. Several US states require candidates to be told before they accept, and some ban non-competes for employees altogether.</p>
+<h2>Write it once, reuse it for every hire</h2>
+<p>The free <a href="${rel}templates/offer-letter.html">offer letter template</a> already handles remote or office wording, optional bonus and equity, a benefits list and conditions. Open it in Clausery, answer the questions for each candidate and download a finished Word letter. Candidate details stay on your computer. For interns, use the <a href="${rel}templates/internship-offer-letter.html">internship offer letter</a>.</p>
+<p class="small muted">General information, not legal advice. Employment law varies by country and state.</p>` },
+  { slug: 'how-to-write-a-payment-demand-letter', title: 'How to write a demand letter for unpaid invoices',
+    description: 'A step-by-step guide to asking a customer for overdue payment in writing: what to include, tone, deadlines, interest, and what to do if they still do not pay.',
+    body: (rel) => `
+<p class="lead">Most late invoices are paid after a clear, polite letter with a firm deadline. Here is how to write one that gets paid without damaging the relationship.</p>
+<h2>Before you write</h2>
+<ul>
+  <li>Check the contract or terms for the <a href="${rel}clauses/payment-terms-clause.html">payment terms</a> and any <a href="${rel}clauses/late-payment-interest-clause.html">late payment interest</a> clause.</li>
+  <li>Gather the invoice numbers, dates, amounts and any partial payments.</li>
+  <li>Check the <a href="${rel}clauses/notices-clause.html">notices clause</a> for how formal notices must be sent.</li>
+</ul>
+<h2>What the letter should say</h2>
+<ol>
+  <li><strong>Who owes what.</strong> The customer's legal name, the amount outstanding, and the invoices it relates to.</li>
+  <li><strong>What it was for and when it was due.</strong> One sentence each.</li>
+  <li><strong>A deadline.</strong> Seven to fourteen days is common. Use the free <a href="${rel}free-tools/deadline-calculator.html">deadline calculator</a> to get the exact date.</li>
+  <li><strong>How to pay.</strong> Bank details or a payment link, and a reference to quote.</li>
+  <li><strong>Interest, if the contract allows it.</strong> In the UK, businesses can also claim statutory interest on late commercial payments.</li>
+  <li><strong>An invitation to talk.</strong> If they dispute the invoice or need a payment plan, ask them to say so before the deadline.</li>
+  <li><strong>What happens next.</strong> Collection, suspension of services or legal proceedings. Only mention steps you are prepared to take.</li>
+</ol>
+<h2>Tone</h2>
+<p>Stay factual. Threats you do not intend to carry out, or statements about the customer's honesty, can backfire and in some cases break debt collection rules. Consumer debts are regulated more strictly than business debts in most countries.</p>
+<h2>If they still do not pay</h2>
+<p>Many courts expect a formal pre-action letter before a claim is issued, and some prescribe what it must contain. Small claims courts are designed for business debts without lawyers. Check your local rules before starting proceedings.</p>
+<h2>Use the free template</h2>
+<p>The <a href="${rel}templates/payment-demand-letter.html">payment demand letter template</a> includes optional invoice numbers, interest and next steps. Fill it in online and download a Word letter in a couple of minutes, without uploading customer details anywhere. For amounts in words, try the <a href="${rel}free-tools/amount-in-words.html">amount in words converter</a>.</p>
+<p class="small muted">General information, not legal advice. Debt collection and pre-action rules vary by jurisdiction.</p>` },
+  { slug: 'what-to-include-in-a-statement-of-work', title: 'What to include in a statement of work (SOW)',
+    description: 'The sections every statement of work needs: scope, deliverables, timeline, fees, assumptions, acceptance and change control, with examples of what goes wrong when they are missing.',
+    body: (rel) => `
+<p class="lead">A statement of work describes one project under a master agreement. It is where most project disputes start, usually because something was vague. These sections prevent that.</p>
+<h2>1. Reference to the master agreement</h2>
+<p>Name the master services or consulting agreement the SOW sits under, and say which document wins if they conflict. Legal terms such as <a href="${rel}clauses/limitation-of-liability-clause.html">liability</a> and <a href="${rel}clauses/intellectual-property-clause.html">intellectual property</a> belong in the master agreement, not in each SOW.</p>
+<h2>2. Scope and objectives</h2>
+<p>What the project is for, and what is out of scope. An explicit "out of scope" list is the cheapest protection against scope creep.</p>
+<h2>3. Deliverables</h2>
+<p>Each deliverable with a description specific enough to test: "a responsive five-page website with a contact form", not "a website". Add a due date for each.</p>
+<h2>4. Timeline and milestones</h2>
+<p>Key dates, and which ones depend on the client providing content, access or feedback.</p>
+<h2>5. Fees and payment</h2>
+<p>Fixed price with a payment schedule tied to milestones, or time and materials with rates and an estimate or cap. Include expenses and <a href="${rel}clauses/payment-terms-clause.html">payment terms</a>.</p>
+<h2>6. Assumptions and client responsibilities</h2>
+<p>What the price assumes: number of revision rounds, access to systems, response times for feedback. When an assumption proves wrong, it becomes the basis for a change request.</p>
+<h2>7. Acceptance</h2>
+<p>How deliverables are reviewed, how long the client has, and what happens if they do not respond. "Deemed accepted after ten business days" avoids projects that never formally finish.</p>
+<h2>8. Change control</h2>
+<p>How changes are requested, priced and approved in writing. See the <a href="${rel}clauses/amendment-clause.html">amendment clause</a>.</p>
+<h2>Write SOWs in minutes</h2>
+<p>The free <a href="${rel}templates/statement-of-work.html">statement of work template</a> lists any number of deliverables with due dates, switches between fixed price and time and materials, and includes assumptions and acceptance. Answer the questions in Clausery and download a finished Word SOW. For the master terms, start with the <a href="${rel}templates/service-agreement.html">service agreement</a> or <a href="${rel}templates/consulting-agreement.html">consulting agreement</a>.</p>` },
+  { slug: 'what-to-include-in-an-nda', title: 'What to include in an NDA: a clause-by-clause checklist',
+    description: 'The clauses a non-disclosure agreement needs, from the definition of confidential information to exclusions, term, return of information and governing law, and when to use a mutual or one-way NDA.',
+    body: (rel) => `
+<p class="lead">A non-disclosure agreement is short, but each clause does a specific job. Here is what to check before you send or sign one.</p>
+<h2>Mutual or one-way?</h2>
+<p>If only one side is sharing information, such as a founder pitching to an investor or a company briefing a contractor, a <a href="${rel}templates/one-way-nda.html">one-way NDA</a> is simpler. If both sides will share, as in partnership or acquisition talks, use a <a href="${rel}templates/mutual-nda.html">mutual NDA</a>.</p>
+<h2>The clauses</h2>
+<ol>
+  <li><strong>Parties.</strong> Correct legal names and entity types. An NDA signed by the wrong group company may not protect the one that shares the information.</li>
+  <li><strong>Purpose.</strong> What the information may be used for, described narrowly: "evaluating a possible distribution agreement", not "business purposes".</li>
+  <li><strong>Definition of confidential information.</strong> Whether it covers only marked information or anything reasonably understood to be confidential. See the <a href="${rel}clauses/confidentiality-clause.html">confidentiality clause</a>.</li>
+  <li><strong>Exclusions.</strong> Public information, information already known, information received from someone else, and independent development.</li>
+  <li><strong>Obligations.</strong> Use only for the purpose, disclose only to people who need to know, and protect with reasonable care.</li>
+  <li><strong>Compelled disclosure.</strong> What happens if a court or regulator requires disclosure.</li>
+  <li><strong>Return or destruction.</strong> On request or when talks end, with an exception for automatic backups.</li>
+  <li><strong>Term.</strong> How long the agreement lasts and how long the obligations <a href="${rel}clauses/survival-clause.html">survive</a> afterwards.</li>
+  <li><strong>No licence and no obligation to proceed.</strong> Sharing information does not grant rights in it or commit anyone to a deal.</li>
+  <li><strong>Remedies.</strong> Acknowledging that an injunction may be appropriate, since damages rarely fix a leak.</li>
+  <li><strong>Governing law and jurisdiction.</strong> See the <a href="${rel}clauses/governing-law-clause.html">governing law clause</a>.</li>
+</ol>
+<h2>Things to avoid</h2>
+<ul>
+  <li>Non-solicitation or non-compete terms hidden in an NDA, which the other side may not expect.</li>
+  <li>Clauses that stop someone reporting wrongdoing to a regulator, which are unenforceable in many places.</li>
+  <li>An NDA that is later wiped out by the <a href="${rel}clauses/entire-agreement-clause.html">entire agreement clause</a> of the main contract.</li>
+</ul>
+<h2>Send one in two minutes</h2>
+<p>Both NDA templates are free to download as Word files or fill in online. Clausery asks for the parties, purpose, term and governing law, includes the optional clauses you choose, and produces a finished document without uploading anything.</p>` },
 ];
 
 export const pages = [
@@ -168,7 +272,7 @@ export const pages = [
   { path: 'guides/', title: 'Guides', description: 'Practical guides to automating Word documents, conditional clauses and client intake, without uploading client data.',
     body: (rel) => `<section class="section"><div class="wrap" style="max-width:52rem"><h1>Guides</h1><ul>${GUIDES.map((g) => `<li><a href="${rel}guides/${g.slug}.html">${esc(g.title)}</a><div class="small muted">${esc(g.description)}</div></li>`).join('')}</ul></div></section>` },
   ...GUIDES.map((g) => ({
-    path: `guides/${g.slug}.html`, title: g.title, description: g.description,
+    path: `guides/${g.slug}.html`, title: g.title, description: g.description, feed: true, published: '2026-09-26',
     extraHead: `<script type="application/ld+json">${JSON.stringify({ '@context': 'https://schema.org', '@type': 'Article', headline: g.title, description: g.description, datePublished: '2026-09-26', author: { '@type': 'Organization', name: 'Clausery' } })}</script>`,
     body: (rel) => `<section class="section"><div class="wrap prose"><nav class="small muted" aria-label="Breadcrumb"><a href="${rel}">Home</a> › <a href="${rel}guides/">Guides</a></nav><h1 style="margin-top:1rem">${esc(g.title)}</h1>${g.body(rel)}</div></section>`,
   })),
