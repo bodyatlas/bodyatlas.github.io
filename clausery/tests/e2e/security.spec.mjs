@@ -171,3 +171,20 @@ test('a second tab follows vault changes instead of writing with a stale key', a
   await expect(a.locator('.stepper')).toBeVisible();   // not locked out with 'vault settings are missing'
   await context.close();
 });
+
+test('encrypted records without vault settings can be removed without losing readable ones', async ({ page }) => {
+  await openApp(page);
+  await useSample(page, 0);
+  // an orphaned encrypted draft: ciphertext in the drafts store, no 'vault' settings record
+  await page.evaluate(() => new Promise((res, rej) => { const r = indexedDB.open('clausery'); r.onsuccess = () => { const tx = r.result.transaction('drafts', 'readwrite'); tx.objectStore('drafts').put({ id: 'd_orphan', __enc: 1, data: new Uint8Array([1, 2, 3]) }); tx.oncomplete = () => { r.result.close(); res(); }; tx.onerror = () => rej(tx.error); }; }));
+  await page.goto('app/#/templates');
+  await page.reload();
+  await expect(page.locator('h1:has-text("Some records cannot be opened")')).toBeVisible();
+  await page.click('button:has-text("Remove unreadable records and continue")');
+  await page.click('.modal button:has-text("Remove unreadable records")');
+  await expect(page.locator('.toast-ok').last()).toContainText('1 unreadable record removed');
+  await page.goto('app/#/templates');
+  await expect(page.locator('.cards article[data-template-id]')).toHaveCount(1);
+  await page.reload();
+  await expect(page.locator('h1:has-text("Templates")')).toBeVisible();
+});

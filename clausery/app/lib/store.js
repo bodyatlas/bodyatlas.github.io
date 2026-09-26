@@ -141,6 +141,21 @@ export class Store {
     return false;
   }
 
+  /** Recovery for encrypted records left without vault settings (no passphrase can ever open them): delete only those
+      records, in one transaction, and keep every readable one. Returns how many were removed. */
+  async dropEncryptedRecords() {
+    await this.open();
+    const stores = [...ENCRYPTED_STORES];
+    const rows = {};
+    for (const s of stores) rows[s] = (await this.req(this.tx(s).getAll())).filter(isEncrypted).map((r) => r.id);
+    const tx = this.db.transaction(stores, 'readwrite');
+    for (const s of stores) for (const id of rows[s]) tx.objectStore(s).delete(id);
+    await new Promise((resolve, reject) => { tx.oncomplete = resolve; tx.onerror = () => reject(tx.error); tx.onabort = () => reject(tx.error || new Error('aborted')); });
+    this.emit('*', null);
+    this.post({ type: 'vault' });
+    return stores.reduce((n, s) => n + rows[s].length, 0);
+  }
+
   async wipe() {
     await this.open();
     for (const s of STORES) await this.req(this.tx(s, 'readwrite').clear());
