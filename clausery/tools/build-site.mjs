@@ -12,7 +12,7 @@ for (const f of readdirSync('site').filter((f) => f.endsWith('.mjs'))) {
 for (const p of pages) {
   const rel = p.path.split('/').filter(Boolean).length - (p.path.endsWith('/') || p.path === '' ? 0 : 1) > 0 ? '../'.repeat(p.path.split('/').filter(Boolean).length - (p.path.endsWith('/') || p.path === '' ? 0 : 1)) : './';
   const out = p.path === '' ? 'index.html' : p.path.endsWith('/') ? p.path + 'index.html' : p.path;
-  const html = (head({ title: p.title, description: p.description, path: p.path, extraHead: p.extraHead || '' }) + p.body(rel) + footer(rel)).replace(/<pre>/g, '<pre tabindex="0">');
+  const html = (head({ title: p.title, description: p.description, path: p.path, extraHead: p.extraHead || '', ogImage: p.ogImage }) + p.body(rel) + footer(rel)).replace(/<pre>/g, '<pre tabindex="0">');
   mkdirSync(dirname(out), { recursive: true });
   writeFileSync(out, html);
   console.log('wrote', out);

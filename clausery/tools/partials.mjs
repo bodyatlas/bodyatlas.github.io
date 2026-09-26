@@ -1,6 +1,6 @@
 // Shared HTML fragments for the static site pages (used by tools/build-site.mjs).
 export const YEAR = '2026';
-export function head({ title, description, path, extraHead = '' }) {
+export function head({ title, description, path, extraHead = '', ogImage = 'assets/og.png' }) {
   const full = title === 'Clausery' ? 'Clausery — Document automation that never leaves your browser' : `${title} · Clausery`;
   const url = `https://bodyatlas.github.io/clausery/${path}`;
   const depth = path.split('/').filter(Boolean).length - (path.endsWith('/') || path === '' ? 0 : 1);
@@ -18,7 +18,7 @@ export function head({ title, description, path, extraHead = '' }) {
 <meta property="og:title" content="${esc(full)}">
 <meta property="og:description" content="${esc(description)}">
 <meta property="og:url" content="${url}">
-<meta property="og:image" content="https://bodyatlas.github.io/clausery/assets/og.png">
+<meta property="og:image" content="https://bodyatlas.github.io/clausery/${ogImage}">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="theme-color" content="#1b2a41">
 <meta name="referrer" content="strict-origin-when-cross-origin">
@@ -67,11 +67,13 @@ export function footer(rel) {
       <a href="${rel}pricing/">Pricing</a>
       <a href="${rel}changelog.html">Changelog</a>
       <a href="${rel}docs/self-hosting.html">Self-hosting</a>
+      <a href="${rel}press/">Press kit</a>
     </div>
     <div>
       <h4>Resources</h4>
       <a href="${rel}templates/">Free templates</a>
       <a href="${rel}guides/">Guides</a>
+      <a href="${rel}free-tools/">Free tools</a>
       <a href="${rel}compare/">Compare</a>
       <a href="${rel}for/law-firms.html">For law firms</a>
       <a href="${rel}for/hr-teams.html">For HR teams</a>
