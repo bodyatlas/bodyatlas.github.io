@@ -1,4 +1,3 @@
 User-agent: *
 Allow: /
 Disallow: /clausery/app/
-Sitemap: https://bodyatlas.github.io/clausery/sitemap.xml

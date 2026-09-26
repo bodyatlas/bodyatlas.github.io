@@ -3,115 +3,12 @@
 <head>
 <meta charset="utf-8">
 <title>Getting started · Clausery</title>
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="description" content="Install nothing, sign up for nothing: tag a Word template, drop it into Clausery, answer the questions, download the document.">
-<link rel="canonical" href="https://bodyatlas.github.io/clausery/docs/">
-<meta property="og:type" content="website">
-<meta property="og:site_name" content="Clausery">
-<meta property="og:title" content="Getting started · Clausery">
-<meta property="og:description" content="Install nothing, sign up for nothing: tag a Word template, drop it into Clausery, answer the questions, download the document.">
-<meta property="og:url" content="https://bodyatlas.github.io/clausery/docs/">
-<meta property="og:image" content="https://bodyatlas.github.io/clausery/assets/og.png">
-<meta name="twitter:card" content="summary_large_image">
-<meta name="theme-color" content="#1b2a41">
-<meta name="referrer" content="strict-origin-when-cross-origin">
-<link rel="icon" href="../assets/icon.svg" type="image/svg+xml">
-<link rel="apple-touch-icon" href="../assets/icon-192.png">
-<link rel="manifest" href="../app/manifest.webmanifest">
-<link rel="alternate" type="application/atom+xml" title="Clausery guides and clause library" href="../feed.xml">
-<link rel="stylesheet" href="../site.css">
-<script src="../app/theme.js"></script>
-<script src="../site.js" defer></script>
-
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="Clausery has moved to getclausery.github.io.">
+<link rel="canonical" href="https://getclausery.github.io/docs/">
+<meta http-equiv="refresh" content="0; url=https://getclausery.github.io/docs/">
 </head>
 <body>
-<a class="sr-only" href="#main">Skip to content</a>
-<header class="site-header">
-  <div class="wrap">
-    <a class="brand" href="../"><img src="../assets/icon.svg" alt="" width="30" height="30"> Clausery</a>
-    <button class="menu-btn" type="button" aria-expanded="false" aria-controls="site-nav">Menu</button>
-    <nav class="site-nav" id="site-nav" aria-label="Site">
-      <a href="../templates/">Templates</a>
-      <a href="../#features">Features</a>
-      <a href="../pricing/">Pricing</a>
-      <a href="../docs/" aria-current="page">Docs</a>
-      <a href="../docs/security.html">Security</a>
-      <a class="btn btn-primary" href="../app/">Open the app</a>
-    </nav>
-  </div>
-</header>
-<main id="main" tabindex="-1">
-<div class="wrap docs"><nav class="docs-nav" aria-label="Documentation"><h4>Start here</h4><a href="../docs/" aria-current="page">Getting started</a><a href="../docs/templates.html">Template syntax</a><a href="../docs/questionnaire.html">Designing the questionnaire</a><a href="../docs/logic.html">Logic & calculations</a><h4>Working with clients</h4><a href="../docs/intake.html">Client intake forms</a><a href="../docs/teams.html">Teams & template packs</a><a href="../docs/backups.html">Backups & data</a><h4>Trust</h4><a href="../docs/security.html">Security</a><a href="../docs/self-hosting.html">Self-hosting</a><a href="../docs/faq.html">FAQ</a></nav><article class="docs-body">
-<h1>Getting started</h1>
-<p class="lead">Ten minutes from an existing Word document to a reusable, guided template.</p>
-<h2>1. Tag a Word document</h2>
-<p>Open any document you draft regularly in Microsoft Word (or LibreOffice, Google Docs exported as .docx). Replace each part that changes with a tag in curly braces:</p>
-<pre tabindex="0"><code>This Agreement is made on {effective_date} between {party_a_name} ("{party_a_short}")
-and {party_b_name} ("{party_b_short}").</code></pre>
-<p>Wrap optional passages in a section that starts with <code>{#name}</code> and ends with <code>{/name}</code>:</p>
-<pre tabindex="0"><code>{#has_retainer}Before we begin work, we require a retainer of {retainer_amount}.{/has_retainer}</code></pre>
-<p>Save the file as <strong>.docx</strong>. The full syntax, including repeating lists and table rows, is in <a href="../docs/templates.html">Template syntax</a>. Three ready-made samples are available in the app if you would rather start from one.</p>
-<h2>2. Add it to Clausery</h2>
-<p>Open <a href="../app/">the app</a> and drop the file on the Templates page. Clausery reads the tags and builds a questionnaire: <code>{effective_date}</code> becomes a date question, <code>{retainer_amount}</code> a money question, <code>{#has_retainer}</code> a yes/no question, and questions inside a section are only shown when that section applies.</p>
-<p>The template opens in the designer. Rename questions, add help text, reorder, group into sections, and adjust anything the automatic guesses got wrong. Save.</p>
-<h2>3. Draft a document</h2>
-<p>Click <strong>New draft</strong>. Work through the sections; answers save as you type. On the <strong>Review &amp; generate</strong> step, preview the result, download the .docx, or print to PDF. The draft stays in your list and can be regenerated after edits.</p>
-<div class="note">Nothing in steps 1–3 leaves your computer. The app only ever requests its own files from the site that serves it and never sends your data anywhere. You can confirm this in your browser's developer tools (Network tab).</div>
-<h2>Where things are stored</h2>
-<p>Templates, the original .docx files and drafts are kept in your browser's local database (IndexedDB) for this site. That means:</p>
-<ul>
-  <li>They are available on this device, in this browser profile, without a connection.</li>
-  <li>They are not synced anywhere. Use <a href="../docs/backups.html">backups</a> and template packs to move them.</li>
-  <li>Clearing site data for this site deletes them. Turn on <em>protected storage</em> in Settings → Your data to reduce the risk of the browser evicting them.</li>
-</ul>
-<h2>Next steps</h2>
-<ul>
-  <li><a href="../docs/questionnaire.html">Designing the questionnaire</a>: types, sections, conditions.</li>
-  <li><a href="../docs/logic.html">Logic &amp; calculations</a>: the expression language.</li>
-  <li><a href="../docs/intake.html">Client intake forms</a>: let clients answer offline.</li>
-</ul></article></div></main>
-<footer class="site-footer">
-  <div class="wrap">
-    <div>
-      <h4>Clausery</h4>
-      <p>Document automation that never leaves your browser. Turn your own Word templates into guided questionnaires and generate finished documents, offline, with no account.</p>
-    </div>
-    <div>
-      <h4>Product</h4>
-      <a href="../app/">Open the app</a>
-      <a href="../pricing/">Pricing</a>
-      <a href="../changelog.html">Changelog</a>
-      <a href="../docs/self-hosting.html">Self-hosting</a>
-      <a href="../press/">Press kit</a>
-    </div>
-    <div>
-      <h4>Resources</h4>
-      <a href="../templates/">Free templates</a>
-      <a href="../guides/">Guides</a>
-      <a href="../clauses/">Clause library</a>
-      <a href="../free-tools/">Free tools</a>
-      <a href="../compare/">Compare</a>
-      <a href="../for/law-firms.html">For law firms</a>
-      <a href="../for/hr-teams.html">For HR teams</a>
-      <a href="../for/consultants.html">For consultants</a>
-    </div>
-    <div>
-      <h4>Docs</h4>
-      <a href="../docs/">Getting started</a>
-      <a href="../docs/templates.html">Template syntax</a>
-      <a href="../docs/logic.html">Logic &amp; calculations</a>
-      <a href="../docs/intake.html">Client intake</a>
-      <a href="../docs/security.html">Security</a>
-    </div>
-    <div>
-      <h4>Legal</h4>
-      <a href="../legal/privacy.html">Privacy</a>
-      <a href="../legal/terms.html">Terms</a>
-      <a href="../legal/dpa.html">Data processing</a>
-      <a href="mailto:hello@clausery.app">Contact</a>
-    </div>
-    <div class="legal">© 2026 Clausery. Clausery is software, not legal advice; documents you generate are your responsibility. Not affiliated with Microsoft; Word is a trademark of Microsoft Corporation.</div>
-  </div>
-</footer>
+<main id="main"><p>Clausery has moved. Continue to <a href="https://getclausery.github.io/docs/">https://getclausery.github.io/docs/</a>.</p></main>
 </body>
 </html>

@@ -3,119 +3,12 @@
 <head>
 <meta charset="utf-8">
 <title>Contract deadline calculator (business days, months, years) · Clausery</title>
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="description" content="Add or subtract days, business days, weeks, months or years from a date, with month-end handling and your own holidays.">
-<link rel="canonical" href="https://bodyatlas.github.io/clausery/free-tools/deadline-calculator.html">
-<meta property="og:type" content="website">
-<meta property="og:site_name" content="Clausery">
-<meta property="og:title" content="Contract deadline calculator (business days, months, years) · Clausery">
-<meta property="og:description" content="Add or subtract days, business days, weeks, months or years from a date, with month-end handling and your own holidays.">
-<meta property="og:url" content="https://bodyatlas.github.io/clausery/free-tools/deadline-calculator.html">
-<meta property="og:image" content="https://bodyatlas.github.io/clausery/assets/og.png">
-<meta name="twitter:card" content="summary_large_image">
-<meta name="theme-color" content="#1b2a41">
-<meta name="referrer" content="strict-origin-when-cross-origin">
-<link rel="icon" href="../assets/icon.svg" type="image/svg+xml">
-<link rel="apple-touch-icon" href="../assets/icon-192.png">
-<link rel="manifest" href="../app/manifest.webmanifest">
-<link rel="alternate" type="application/atom+xml" title="Clausery guides and clause library" href="../feed.xml">
-<link rel="stylesheet" href="../site.css">
-<script src="../app/theme.js"></script>
-<script src="../site.js" defer></script>
-<style>
-.tool { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 1.5rem; margin: 1.5rem 0; }
-.tool label { display: block; font-weight: 600; margin-bottom: .3rem; }
-.tool .row { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1rem; margin-bottom: 1rem; }
-.tool input, .tool select, .tool textarea { width: 100%; padding: .55rem .65rem; border: 1px solid var(--border-strong); border-radius: var(--radius-sm); background: var(--bg); color: var(--text); font: inherit; }
-.tool .out { font-size: 1.2rem; font-weight: 600; padding: 1rem; background: var(--accent-soft); color: var(--text); border-radius: var(--radius-sm); min-height: 3rem; }
-.tool .out-row { display: flex; gap: .75rem; align-items: flex-start; margin-top: .75rem; } .tool .out-row .out { flex: 1; }
-.tool .err, .bad { color: #b42318; } .ok { color: var(--ok); } .warn { color: var(--warn); }
-#drop { border: 2px dashed var(--border-strong); border-radius: var(--radius); padding: 2rem; text-align: center; }
-#drop.over { border-color: var(--accent); background: var(--accent-soft); }
-#report table { width: 100%; border-collapse: collapse; font-size: .92rem; } #report th, #report td { text-align: left; padding: .5rem; border-bottom: 1px solid var(--border); vertical-align: top; }
-#report .small { font-size: .85rem; color: var(--muted); }
-</style><script type="application/ld+json">{"@context":"https://schema.org","@type":"WebApplication","name":"Contract deadline calculator","description":"Add or subtract days, business days, weeks, months or years from a date, with month-end handling and your own holidays.","url":"https://bodyatlas.github.io/clausery/free-tools/deadline-calculator.html","applicationCategory":"BusinessApplication","operatingSystem":"Any (web browser)","offers":{"@type":"Offer","price":"0","priceCurrency":"USD"}}</script><script type="module" src="deadline-calculator.js"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="Clausery has moved to getclausery.github.io.">
+<link rel="canonical" href="https://getclausery.github.io/free-tools/deadline-calculator.html">
+<meta http-equiv="refresh" content="0; url=https://getclausery.github.io/free-tools/deadline-calculator.html">
 </head>
 <body>
-<a class="sr-only" href="#main">Skip to content</a>
-<header class="site-header">
-  <div class="wrap">
-    <a class="brand" href="../"><img src="../assets/icon.svg" alt="" width="30" height="30"> Clausery</a>
-    <button class="menu-btn" type="button" aria-expanded="false" aria-controls="site-nav">Menu</button>
-    <nav class="site-nav" id="site-nav" aria-label="Site">
-      <a href="../templates/">Templates</a>
-      <a href="../#features">Features</a>
-      <a href="../pricing/">Pricing</a>
-      <a href="../docs/">Docs</a>
-      <a href="../docs/security.html">Security</a>
-      <a class="btn btn-primary" href="../app/">Open the app</a>
-    </nav>
-  </div>
-</header>
-<main id="main" tabindex="-1">
-<section class="section"><div class="wrap" style="max-width:52rem"><nav class="small muted" aria-label="Breadcrumb"><a href="../">Home</a> › <a href="../free-tools/">Free tools</a> › Deadline calculator</nav>
-<h1 style="margin-top:1rem">Contract deadline calculator</h1>
-<p class="lead">Work out notice periods, payment due dates, renewal dates and response deadlines. Month arithmetic stops at month end, so January 31 plus one month is the last day of February.</p>
-<div class="tool">
-  <div class="row">
-    <div><label for="start">Start date</label><input id="start" type="date"></div>
-    <div><label for="amount">Number</label><input id="amount" type="number" min="0" step="1" value="30"></div>
-    <div><label for="unit">Unit</label><select id="unit"><option value="days">Calendar days</option><option value="business">Business days (Mon–Fri)</option><option value="weeks">Weeks</option><option value="months">Months</option><option value="years">Years</option></select></div>
-    <div><label for="direction">Direction</label><select id="direction"><option value="after">After the start date</option><option value="before">Before the start date</option></select></div>
-  </div>
-  <label for="holidays">Holidays to skip for business days (optional, one date per line or comma-separated, YYYY-MM-DD)</label>
-  <textarea id="holidays" rows="2" placeholder="2026-12-25, 2027-01-01"></textarea>
-  <p id="error" class="err" role="alert" hidden></p>
-  <div class="out" id="result" aria-live="polite" style="margin-top:1rem"></div>
-  <p class="small muted" id="result-note" style="margin-top:.5rem"></p>
-</div>
-<h2>Things to check</h2>
-<ul><li><strong>Is the start day counted?</strong> This calculator counts from the day after the start date, which is the usual rule, but some contracts and courts say otherwise.</li><li><strong>Weekends and holidays.</strong> Many rules move a deadline that falls on a non-business day to the next business day.</li><li><strong>Time zones and cut-off times.</strong> "By 5pm" or "close of business" matters for filings and notices.</li></ul>
-<p class="small muted">A calculation aid, not legal advice. Court and statutory deadlines follow their own rules.</p>
-<p>Clausery templates can calculate these dates for you with <code>add_days</code>, <code>add_months</code> and <code>add_years</code>.</p>
-<div class="feature" style="margin-top:2.5rem"><h2 style="font-size:1.15rem">Draft the whole document, not just one line</h2><p>Clausery turns your Word templates into questionnaires and builds the finished document in your browser, with amounts in words, dates and totals calculated for you. Free for up to three templates.</p><p style="margin-top:1rem"><a class="btn btn-primary" href="../app/">Open Clausery</a> <a class="btn" href="../templates/">Free templates</a></p></div></div></section></main>
-<footer class="site-footer">
-  <div class="wrap">
-    <div>
-      <h4>Clausery</h4>
-      <p>Document automation that never leaves your browser. Turn your own Word templates into guided questionnaires and generate finished documents, offline, with no account.</p>
-    </div>
-    <div>
-      <h4>Product</h4>
-      <a href="../app/">Open the app</a>
-      <a href="../pricing/">Pricing</a>
-      <a href="../changelog.html">Changelog</a>
-      <a href="../docs/self-hosting.html">Self-hosting</a>
-      <a href="../press/">Press kit</a>
-    </div>
-    <div>
-      <h4>Resources</h4>
-      <a href="../templates/">Free templates</a>
-      <a href="../guides/">Guides</a>
-      <a href="../clauses/">Clause library</a>
-      <a href="../free-tools/">Free tools</a>
-      <a href="../compare/">Compare</a>
-      <a href="../for/law-firms.html">For law firms</a>
-      <a href="../for/hr-teams.html">For HR teams</a>
-      <a href="../for/consultants.html">For consultants</a>
-    </div>
-    <div>
-      <h4>Docs</h4>
-      <a href="../docs/">Getting started</a>
-      <a href="../docs/templates.html">Template syntax</a>
-      <a href="../docs/logic.html">Logic &amp; calculations</a>
-      <a href="../docs/intake.html">Client intake</a>
-      <a href="../docs/security.html">Security</a>
-    </div>
-    <div>
-      <h4>Legal</h4>
-      <a href="../legal/privacy.html">Privacy</a>
-      <a href="../legal/terms.html">Terms</a>
-      <a href="../legal/dpa.html">Data processing</a>
-      <a href="mailto:hello@clausery.app">Contact</a>
-    </div>
-    <div class="legal">© 2026 Clausery. Clausery is software, not legal advice; documents you generate are your responsibility. Not affiliated with Microsoft; Word is a trademark of Microsoft Corporation.</div>
-  </div>
-</footer>
+<main id="main"><p>Clausery has moved. Continue to <a href="https://getclausery.github.io/free-tools/deadline-calculator.html">https://getclausery.github.io/free-tools/deadline-calculator.html</a>.</p></main>
 </body>
 </html>
