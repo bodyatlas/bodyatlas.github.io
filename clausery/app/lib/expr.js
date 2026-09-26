@@ -11,7 +11,9 @@
      unary       : "-" unary | postfix
      postfix     : primary ("." IDENT)*
      primary     : NUMBER | STRING | true | false | null | IDENT | IDENT "(" args ")" | "(" or ")" | "[" list "]"
-   Values: numbers, strings, booleans, null, arrays, plain objects (repeat rows). */
+   Values: numbers, strings, booleans, null, arrays, plain objects (repeat rows).
+   Chains of the same operator (a + b + c, x or y or z) parse to one flat node, so only real nesting
+   (parentheses, calls, lists, prefix operators) counts towards the depth limit. */
 
 const FUNCTIONS = {
   upper: (s) => str(s).toUpperCase(),
@@ -41,8 +43,8 @@ const FUNCTIONS = {
   days_between: (a, b) => { const x = parseDate(a), y = parseDate(b); return x && y ? Math.round((y - x) / 86400000) : null; },
   years_between: (a, b) => { const x = parseDate(a), y = parseDate(b); if (!x || !y) return null; let n = y.getFullYear() - x.getFullYear(); const m = y.getMonth() - x.getMonth(); if (m < 0 || (m === 0 && y.getDate() < x.getDate())) n--; return n; },
   add_days: (d, n) => { const p = parseDate(d); if (!p) return null; p.setDate(p.getDate() + num(n)); return localISODate(p); },
-  add_months: (d, n) => { const p = parseDate(d); if (!p) return null; p.setMonth(p.getMonth() + num(n)); return localISODate(p); },
-  add_years: (d, n) => { const p = parseDate(d); if (!p) return null; p.setFullYear(p.getFullYear() + num(n)); return localISODate(p); },
+  add_months: (d, n) => { const p = parseDate(d); return p ? localISODate(addMonths(p, num(n))) : null; },
+  add_years: (d, n) => { const p = parseDate(d); return p ? localISODate(addMonths(p, num(n) * 12)) : null; },
   format_number: (v, decimals = 0, locale) => new Intl.NumberFormat(locale || undefined, { minimumFractionDigits: num(decimals), maximumFractionDigits: num(decimals) }).format(num(v)),
   format_money: (v, currency = 'USD', locale) => new Intl.NumberFormat(locale || undefined, { style: 'currency', currency: str(currency) || 'USD' }).format(num(v)),
   format_date: (d, style = 'long', locale) => formatDate(d, style, locale),
@@ -61,20 +63,43 @@ function num(v) { if (typeof v === 'number') return v; if (typeof v === 'boolean
 function flat(a) { return a.flatMap((x) => (Array.isArray(x) ? x : [x])); }
 function pick(o, key) { return o && typeof o === 'object' && Object.prototype.hasOwnProperty.call(o, key) ? o[key] : null; }
 export function truthy(v) { if (Array.isArray(v)) return v.length > 0; if (v == null) return false; if (typeof v === 'string') return v.trim() !== '' && v !== 'false' && v !== '0'; if (typeof v === 'object') return true; return !!v; }
+/** A number, a boolean, or text that is entirely a number ("60000", " 1.5 "); not "" or "12 Main St". */
+function isNumeric(v) { return typeof v === 'number' || typeof v === 'boolean' || (typeof v === 'string' && v.trim() !== '' && Number.isFinite(Number(v))); }
 function looseEq(a, b) {
   if (a == null && b == null) return true;
-  if (typeof a === 'number' || typeof b === 'number') return num(a) === num(b) && (a !== '' && b !== '');
+  // numeric comparison only when both sides are numbers (or numeric text): 0 == "none" and 0 == null are false
+  if (typeof a === 'number' || typeof b === 'number') return isNumeric(a) && isNumeric(b) && num(a) === num(b);
   if (typeof a === 'boolean' || typeof b === 'boolean') return truthy(a) === truthy(b);
   return str(a) === str(b);
 }
-function compare(a, b) { if (typeof a === 'number' || typeof b === 'number') return num(a) - num(b); const x = str(a), y = str(b); return x < y ? -1 : x > y ? 1 : 0; }
+/* Ordering: numeric when both sides are numeric (numbers typed as text compare as numbers); a number against
+   non-numeric text or an empty answer is incomparable (every < <= > >= is false); text against text is alphabetical. */
+function compare(a, b) {
+  if (isNumeric(a) && isNumeric(b)) return num(a) - num(b);
+  if (typeof a === 'number' || typeof b === 'number') return NaN;
+  const x = str(a), y = str(b); return x < y ? -1 : x > y ? 1 : 0;
+}
 function localISODate(d) { return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; }
+/** Month arithmetic that clamps to the last day of the target month (Jan 31 + 1 month = Feb 28), like Excel's EDATE. */
+function addMonths(p, months) {
+  const total = p.getFullYear() * 12 + p.getMonth() + Math.trunc(months);
+  const y = Math.floor(total / 12), m = total - y * 12;
+  return new Date(y, m, Math.min(p.getDate(), new Date(y, m + 1, 0).getDate()));
+}
 export function parseDate(v) {
   if (v instanceof Date) return Number.isNaN(v.getTime()) ? null : new Date(v.getTime());
   if (typeof v !== 'string') return null;
-  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(v.trim());
-  if (m) return new Date(+m[1], +m[2] - 1, +m[3]);
-  const d = new Date(v); return Number.isNaN(d.getTime()) ? null : d;
+  const s = v.trim();
+  // ISO dates (optionally followed by a time) and partial dates (2026, 2026-09) are built as local dates and must be real calendar dates
+  const m = /^(\d{4})(?:-(\d{1,2})(?:-(\d{1,2}))?)?(?:$|T)/.exec(s);
+  if (m) {
+    const y = +m[1], mo = m[2] ? +m[2] : 1, d = m[3] ? +m[3] : 1;
+    const out = new Date(y, mo - 1, d);
+    return out.getFullYear() === y && out.getMonth() === mo - 1 && out.getDate() === d ? out : null;
+  }
+  // written or slashed dates ("September 24, 2026", "9/24/2026") need a four-digit year; bare numbers like "1" are not dates
+  if (!/\d{4}/.test(s) || !/[A-Za-z/]/.test(s)) return null;
+  const d = new Date(s); return Number.isNaN(d.getTime()) ? null : d;
 }
 export function formatDate(v, style = 'long', locale) {
   const d = parseDate(v); if (!d) return str(v);
@@ -134,30 +159,43 @@ function tokenize(src) {
 }
 
 // ---------------------------------------------------------------- parser → AST
+const MAX_DEPTH = 100;   // nesting levels (parentheses, calls, lists, prefix operators, member chains); chains of one operator do not nest
+
 export function parse(src) {
   const tokens = tokenize(String(src ?? ''));
-  let p = 0;
+  let p = 0, depth = 0;
   const peek = () => tokens[p];
   const next = () => tokens[p++];
   const isOp = (v) => peek().type === 'op' && peek().value === v;
   const isKw = (v) => peek().type === 'kw' && peek().value === v;
   const expect = (v) => { if (!isOp(v)) throw new ExprError(`Expected "${v}"`, peek().pos); return next(); };
+  // every construct that recurses into the grammar goes through nest(), so the parser (and later the evaluator) never overflows the stack
+  const nest = (fn) => { if (++depth > MAX_DEPTH) throw new ExprError('Expression too deep', peek().pos); try { return fn(); } finally { depth--; } };
 
-  function or() { let left = and(); while (isKw('or') || isOp('||')) { next(); left = { t: 'or', l: left, r: and() }; } return left; }
-  function and() { let left = not(); while (isKw('and') || isOp('&&')) { next(); left = { t: 'and', l: left, r: not() }; } return left; }
-  function not() { if (isKw('not') || isOp('!')) { next(); return { t: 'not', e: not() }; } return comparison(); }
+  function or() { const items = [and()]; while (isKw('or') || isOp('||')) { next(); items.push(and()); } return items.length === 1 ? items[0] : { t: 'or', items }; }
+  function and() { const items = [not()]; while (isKw('and') || isOp('&&')) { next(); items.push(not()); } return items.length === 1 ? items[0] : { t: 'and', items }; }
+  function not() { if (isKw('not') || isOp('!')) { next(); return { t: 'not', e: nest(not) }; } return comparison(); }
   function comparison() {
     const left = additive();
     if (peek().type === 'op' && ['==', '!=', '<', '<=', '>', '>='].includes(peek().value)) { const op = next().value; return { t: 'cmp', op, l: left, r: additive() }; }
     if (isKw('in')) { next(); return { t: 'in', l: left, r: additive() }; }
     return left;
   }
-  function additive() { let left = multiplicative(); while (isOp('+') || isOp('-')) { const op = next().value; left = { t: 'bin', op, l: left, r: multiplicative() }; } return left; }
-  function multiplicative() { let left = unary(); while (isOp('*') || isOp('/') || isOp('%')) { const op = next().value; left = { t: 'bin', op, l: left, r: unary() }; } return left; }
-  function unary() { if (isOp('-')) { next(); return { t: 'neg', e: unary() }; } return postfix(); }
+  function chain(operand, ops) {
+    const items = [operand()], opList = [];
+    while (ops.some((o) => isOp(o))) { opList.push(next().value); items.push(operand()); }
+    return items.length === 1 ? items[0] : { t: 'arith', ops: opList, items };
+  }
+  function additive() { return chain(multiplicative, ['+', '-']); }
+  function multiplicative() { return chain(unary, ['*', '/', '%']); }
+  function unary() { if (isOp('-')) { next(); return { t: 'neg', e: nest(unary) }; } return postfix(); }
   function postfix() {
-    let e = primary();
-    while (isOp('.')) { next(); const id = next(); if (id.type !== 'ident') throw new ExprError('Expected property name', id.pos); e = { t: 'member', o: e, k: id.value }; }
+    let e = primary(), n = 0;
+    while (isOp('.')) {
+      next(); const id = next(); if (id.type !== 'ident') throw new ExprError('Expected property name', id.pos);
+      if (++n > MAX_DEPTH) throw new ExprError('Expression too deep', id.pos);
+      e = { t: 'member', o: e, k: id.value };
+    }
     return e;
   }
   function primary() {
@@ -168,15 +206,15 @@ export function parse(src) {
     if (tok.type === 'ident') {
       if (isOp('(')) {
         next(); const args = [];
-        if (!isOp(')')) { args.push(or()); while (isOp(',')) { next(); args.push(or()); } }
+        if (!isOp(')')) { args.push(nest(or)); while (isOp(',')) { next(); args.push(nest(or)); } }
         expect(')');
         if (!Object.prototype.hasOwnProperty.call(FUNCTIONS, tok.value)) throw new ExprError(`Unknown function "${tok.value}"`, tok.pos);
         return { t: 'call', f: tok.value, args };
       }
       return { t: 'id', n: tok.value };
     }
-    if (tok.type === 'op' && tok.value === '(') { const e = or(); expect(')'); return e; }
-    if (tok.type === 'op' && tok.value === '[') { const items = []; if (!isOp(']')) { items.push(or()); while (isOp(',')) { next(); items.push(or()); } } expect(']'); return { t: 'list', items }; }
+    if (tok.type === 'op' && tok.value === '(') { const e = nest(or); expect(')'); return e; }
+    if (tok.type === 'op' && tok.value === '[') { const items = []; if (!isOp(']')) { items.push(nest(or)); while (isOp(',')) { next(); items.push(nest(or)); } } expect(']'); return { t: 'list', items }; }
     throw new ExprError(tok.type === 'eof' ? 'Unexpected end of expression' : `Unexpected "${tok.value}"`, tok.pos);
   }
   const ast = or();
@@ -185,8 +223,16 @@ export function parse(src) {
 }
 
 // ---------------------------------------------------------------- evaluator
+function arith(op, a, b) {
+  // "+" joins text whenever either side is text (even "5" + 5 = "55"); Number and Money answers are real numbers, so they add
+  if (op === '+') return typeof a === 'string' || typeof b === 'string' ? str(a) + str(b) : num(a) + num(b);
+  if (op === '-') return num(a) - num(b);
+  if (op === '*') return num(a) * num(b);
+  if (op === '/') return num(b) === 0 ? null : num(a) / num(b);
+  return num(b) === 0 ? null : num(a) % num(b);
+}
 function evalNode(n, scope, depth) {
-  if (depth > 200) throw new ExprError('Expression too deep', 0);
+  if (depth > 1000) throw new ExprError('Expression too deep', 0);   // belt and braces: parse() already bounds nesting
   switch (n.t) {
     case 'lit': return n.v;
     case 'list': return n.items.map((i) => evalNode(i, scope, depth + 1));
@@ -195,8 +241,8 @@ function evalNode(n, scope, depth) {
     case 'call': return FUNCTIONS[n.f](...n.args.map((a) => evalNode(a, scope, depth + 1)));
     case 'neg': return -num(evalNode(n.e, scope, depth + 1));
     case 'not': return !truthy(evalNode(n.e, scope, depth + 1));
-    case 'and': return truthy(evalNode(n.l, scope, depth + 1)) ? evalNode(n.r, scope, depth + 1) : false;
-    case 'or': { const l = evalNode(n.l, scope, depth + 1); return truthy(l) ? l : evalNode(n.r, scope, depth + 1); }
+    case 'and': { let v = true; for (const i of n.items) { v = evalNode(i, scope, depth + 1); if (!truthy(v)) return false; } return v; }
+    case 'or': { let v = null; for (const i of n.items) { v = evalNode(i, scope, depth + 1); if (truthy(v)) return v; } return v; }
     case 'in': { const v = evalNode(n.l, scope, depth + 1), list = evalNode(n.r, scope, depth + 1); return Array.isArray(list) ? list.some((x) => looseEq(x, v)) : str(list).includes(str(v)); }
     case 'cmp': {
       const a = evalNode(n.l, scope, depth + 1), b = evalNode(n.r, scope, depth + 1);
@@ -207,19 +253,14 @@ function evalNode(n, scope, depth) {
       }
       break;
     }
-    case 'bin': {
-      const a = evalNode(n.l, scope, depth + 1), b = evalNode(n.r, scope, depth + 1);
-      if (n.op === '+') return (typeof a === 'string' || typeof b === 'string') && !(isNumeric(a) && isNumeric(b)) ? str(a) + str(b) : num(a) + num(b);
-      if (n.op === '-') return num(a) - num(b);
-      if (n.op === '*') return num(a) * num(b);
-      if (n.op === '/') return num(b) === 0 ? null : num(a) / num(b);
-      if (n.op === '%') return num(b) === 0 ? null : num(a) % num(b);
-      break;
+    case 'arith': {
+      let acc = evalNode(n.items[0], scope, depth + 1);
+      for (let i = 1; i < n.items.length; i++) acc = arith(n.ops[i - 1], acc, evalNode(n.items[i], scope, depth + 1));
+      return acc;
     }
   }
   throw new ExprError('Invalid expression node', 0);
 }
-function isNumeric(v) { return typeof v === 'number' || (typeof v === 'string' && v.trim() !== '' && !Number.isNaN(Number(v))); }
 
 export function makeScope(data, parent) {
   const own = data && typeof data === 'object' ? data : {};
@@ -244,21 +285,35 @@ export function compile(src) {
   return (data = {}) => evalNode(ast, data && typeof data.get === 'function' ? data : makeScope(data), 0);
 }
 
-/** Returns the identifiers an expression references (for dependency ordering). */
-export function references(src) {
-  const out = new Set();
-  const walk = (n) => {
+/**
+ * The identifiers an expression references, with the member keys read off each one:
+ * "sum(items.rate) + count(items) * fee" → { items: null, fee: [] } (null = the whole value is used, not just named members).
+ */
+export function referenceDetails(src) {
+  const out = new Map();
+  const walk = (n, memberOf) => {
     if (!n || typeof n !== 'object') return;
-    if (n.t === 'id') out.add(n.n);
-    for (const k of ['l', 'r', 'e', 'o']) if (n[k]) walk(n[k]);
-    if (n.args) n.args.forEach(walk);
-    if (n.items) n.items.forEach(walk);
+    if (n.t === 'id') {
+      if (!out.has(n.n)) out.set(n.n, memberOf == null ? null : [memberOf]);
+      else if (out.get(n.n) !== null) { if (memberOf == null) out.set(n.n, null); else if (!out.get(n.n).includes(memberOf)) out.get(n.n).push(memberOf); }
+      return;
+    }
+    if (n.t === 'member') { walk(n.o, n.o.t === 'id' ? n.k : null); return; }
+    for (const k of ['l', 'r', 'e', 'o']) if (n[k]) walk(n[k], null);
+    if (n.args) n.args.forEach((a) => walk(a, null));
+    if (n.items) n.items.forEach((i) => walk(i, null));
   };
-  walk(parse(src));
-  return [...out];
+  walk(parse(src), null);
+  return out;
 }
+
+/** Returns the identifiers an expression references (for dependency ordering). */
+export function references(src) { return [...referenceDetails(src).keys()]; }
 
 /** Validate an expression; returns null when fine or an error message. */
 export function validate(src) {
-  try { parse(src); return null; } catch (e) { return e.message + (typeof e.pos === 'number' ? ` (at position ${e.pos + 1})` : ''); }
+  try { parse(src); return null; } catch (e) {
+    if (!(e instanceof ExprError)) return 'Expression too deep';
+    return e.message + (typeof e.pos === 'number' ? ` (at position ${e.pos + 1})` : '');
+  }
 }

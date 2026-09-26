@@ -5,15 +5,18 @@ export function h(tag, props, ...children) {
   const m = /^([a-z0-9-]+)((?:[.#][\w-]+)*)$/i.exec(tag) || [null, tag, ''];
   const el = document.createElement(m[1] || 'div');
   const classes = [];
+  let deferredValue;
   for (const part of (m[2] || '').match(/[.#][\w-]+/g) || []) part[0] === '.' ? classes.push(part.slice(1)) : (el.id = part.slice(1));
   if (props) {
     for (const [k, v] of Object.entries(props)) {
-      if (v == null || v === false) continue;
+      if (v == null) continue;
+      if (v === false) { if (k in el && typeof el[k] === 'boolean') el[k] = false; continue; }   // e.g. spellcheck: false
       if (k === 'class' || k === 'className') classes.push(...String(v).split(/\s+/).filter(Boolean));
       else if (k === 'style' && typeof v === 'object') Object.assign(el.style, v);
       else if (k === 'dataset') Object.assign(el.dataset, v);
       else if (k === 'html') el.innerHTML = v;
       else if (k === 'ref') v(el);
+      else if (k === 'value' && (el.tagName === 'SELECT' || el.tagName === 'TEXTAREA')) deferredValue = v;   // needs the children first
       else if (k.startsWith('on') && typeof v === 'function') el.addEventListener(k.slice(2).toLowerCase(), v);
       else if (k in el && typeof v !== 'string' && k !== 'list') el[k] = v;
       else if (v === true) el.setAttribute(k, '');
@@ -22,6 +25,7 @@ export function h(tag, props, ...children) {
   }
   if (classes.length) el.classList.add(...classes);
   append(el, children);
+  if (deferredValue !== undefined) el.value = deferredValue;
   return el;
 }
 export function append(el, children) {
@@ -67,19 +71,26 @@ export function toast(message, { type = 'info', timeout = 4000, action } = {}) {
 }
 
 // ---------------------------------------------------------------- modals
-let openModals = 0;
+let openModals = 0, modalSeq = 0;
+const openModalCloses = new Set();
+/** Close every open dialog (used when the workspace locks so nothing stays usable over the lock screen). */
+export function closeAllModals() { for (const close of [...openModalCloses]) close(); }
 export function modal({ title, body, actions = [], size = 'md', onClose, closeLabel = 'Close', dismissible = true }) {
   const previouslyFocused = document.activeElement;
   let resolveClose;
   const closed = new Promise((r) => { resolveClose = r; });
-  const box = h('div.modal', { role: 'dialog', 'aria-modal': 'true', 'aria-labelledby': 'modal-title-' + (++openModals), class: 'modal-' + size });
+  const box = h('div.modal', { role: 'dialog', 'aria-modal': 'true', 'aria-labelledby': 'modal-title-' + (++modalSeq), class: 'modal-' + size });
   const overlay = h('div.modal-overlay', { onclick: (e) => { if (e.target === overlay && dismissible) close(); } }, box);
   function close(result) {
     if (!overlay.isConnected) return;
-    overlay.remove(); openModals--;
+    overlay.remove(); openModals = Math.max(0, openModals - 1); openModalCloses.delete(close);
     document.body.classList.toggle('modal-open', openModals > 0);
     document.removeEventListener('keydown', onKey);
-    if (previouslyFocused && previouslyFocused.focus) previouslyFocused.focus();
+    const main = document.getElementById('main');
+    if (previouslyFocused && previouslyFocused.isConnected && previouslyFocused.focus) previouslyFocused.focus();
+    else if (main) main.focus({ preventScroll: true });
+    // callers often re-render the view right after a confirm, detaching the opener: catch the dropped focus then
+    requestAnimationFrame(() => { if (!openModals && document.activeElement === document.body && main && main.isConnected) main.focus({ preventScroll: true }); });
     if (onClose) onClose(result);
     resolveClose(result);
   }
@@ -99,10 +110,11 @@ export function modal({ title, body, actions = [], size = 'md', onClose, closeLa
     bodyEl,
     actions.length ? h('div.modal-actions', actions.map((a) => h('button.btn', { type: 'button', class: a.class || (a.primary ? 'btn-primary' : ''), disabled: a.disabled, onclick: async () => { const r = a.onClick ? await a.onClick({ close, body: bodyEl }) : undefined; if (r !== false && a.closes !== false) close(a.value ?? r); } }, a.label))) : null,
   );
-  document.body.append(overlay); openModals++;
+  document.body.append(overlay); openModals++; openModalCloses.add(close);
   document.body.classList.add('modal-open');
   document.addEventListener('keydown', onKey);
-  requestAnimationFrame(() => { const f = box.querySelector('[autofocus], input, select, textarea, button.btn-primary, button'); if (f) f.focus(); });
+  // initial focus by priority (a selector list would return the first match in document order, i.e. the close X)
+  requestAnimationFrame(() => { for (const sel of ['[autofocus]', 'input, select, textarea', '.modal-actions button.btn-primary', '.modal-actions button', 'button']) { const f = box.querySelector(sel); if (f) { f.focus(); return; } } });
   return { close, closed, element: box, body: bodyEl };
 }
 

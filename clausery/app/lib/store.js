@@ -9,7 +9,18 @@ const STORES = ['templates', 'files', 'drafts', 'settings'];
 const ENCRYPTED_STORES = new Set(['templates', 'files', 'drafts']);
 
 export class Store {
-  constructor(name = DB_NAME) { this.name = name; this.db = null; this.key = null; this.listeners = new Set(); }
+  constructor(name = DB_NAME) {
+    this.name = name; this.db = null; this.key = null; this.vaultMeta = null; this.listeners = new Set(); this.rekeying = null;
+    // cross-tab sync: other tabs learn about writes and vault changes so they never keep a stale key
+    this.channel = null;
+    try {
+      if (globalThis.BroadcastChannel) {
+        this.channel = new globalThis.BroadcastChannel(name);
+        this.channel.onmessage = (e) => { const m = e.data || {}; if (m.type === 'change') this.emit(m.store, m.id, { remote: true }); else if (m.type === 'vault') this.emit('vault', null, { remote: true }); };
+        if (this.channel.unref) this.channel.unref();   // Node only (unit tests): do not keep the process alive
+      }
+    } catch { /* cross-tab sync is best effort */ }
+  }
 
   async open() {
     if (this.db) return this.db;
@@ -31,15 +42,28 @@ export class Store {
   setKey(key) { this.key = key || null; }
   get locked() { return !!this.vaultMeta && !this.key; }
 
+  /** Listeners are called as fn(store, id, { remote }); remote changes come from another tab. */
   onChange(fn) { this.listeners.add(fn); return () => this.listeners.delete(fn); }
-  emit(store, id) { for (const fn of this.listeners) { try { fn(store, id); } catch (e) { console.error(e); } } }
+  emit(store, id, info = { remote: false }) {
+    for (const fn of this.listeners) { try { fn(store, id, info); } catch (e) { console.error(e); } }
+    if (!info.remote) this.post({ type: 'change', store, id });
+  }
+  post(msg) { try { if (this.channel) this.channel.postMessage(msg); } catch { /* ignore */ } }
 
   tx(store, mode = 'readonly') { return this.db.transaction(store, mode).objectStore(store); }
   req(r) { return new Promise((resolve, reject) => { r.onsuccess = () => resolve(r.result); r.onerror = () => reject(r.error); }); }
 
   async wrap(store, record) {
-    if (ENCRYPTED_STORES.has(store) && this.key) return { id: record.id, ...(await encryptRecord(this.key, record)) };
+    if (!ENCRYPTED_STORES.has(store)) return record;
+    if (this.locked) throw new LockedError();   // never fall back to plaintext in an encrypted workspace
+    if (this.key) return { id: record.id, ...(await encryptRecord(this.key, record)) };
     return record;
+  }
+  /** Writes to encrypted stores are refused while locked and wait for a running rekey so they use the right key. */
+  async writable(store) {
+    await this.open();
+    if (this.rekeying) await this.rekeying.catch(() => {});
+    if (ENCRYPTED_STORES.has(store) && this.locked) throw new LockedError();
   }
   async unwrap(store, raw) {
     if (!raw) return raw;
@@ -59,35 +83,52 @@ export class Store {
     return out;
   }
   async put(store, record) {
-    await this.open();
+    await this.writable(store);
     if (!record || !record.id) throw new Error('Records need an id.');
     await this.req(this.tx(store, 'readwrite').put(await this.wrap(store, record)));
     this.emit(store, record.id);
     return record;
   }
-  async delete(store, id) { await this.open(); await this.req(this.tx(store, 'readwrite').delete(id)); this.emit(store, id); }
-  async clear(store) { await this.open(); await this.req(this.tx(store, 'readwrite').clear()); this.emit(store, null); }
+  async delete(store, id) { await this.writable(store); await this.req(this.tx(store, 'readwrite').delete(id)); this.emit(store, id); }
+  async clear(store) { await this.writable(store); await this.req(this.tx(store, 'readwrite').clear()); this.emit(store, null); }
   async count(store) { await this.open(); return this.req(this.tx(store).count()); }
 
   // settings are small plaintext key/value pairs (theme, license, vault metadata, firm profile)
   async getSetting(key, fallback = null) { const r = await this.get('settings', key); return r ? r.value : fallback; }
   async setSetting(key, value) { return this.put('settings', { id: key, value }); }
 
-  /** Re-encrypt (or decrypt, when key is null) every record in the encrypted stores with a new key. */
-  async rekey(newKey) {
+  /** Re-encrypt (or decrypt, when newKey is null) every record in the encrypted stores and persist the matching
+      vault metadata (null removes it) in ONE IndexedDB transaction, so ciphertext and salt/verifier can never
+      disagree on disk and an interrupted run changes nothing. All crypto happens in memory before the transaction
+      opens: a WebCrypto await inside a live transaction would let it auto-commit early. */
+  async rekey(newKey, meta = null) {
     await this.open();
-    const snapshot = {};
-    for (const s of ENCRYPTED_STORES) snapshot[s] = await this.all(s);
-    const oldKey = this.key;
-    this.key = newKey;
-    try {
+    if (this.rekeying) await this.rekeying;
+    const run = async () => {
+      const oldKey = this.key;
+      const wrapped = {};
       for (const s of ENCRYPTED_STORES) {
-        const os = this.tx(s, 'readwrite');
-        await this.req(os.clear());
-        for (const rec of snapshot[s]) await this.req(os.put(await this.wrap(s, rec)));
+        wrapped[s] = [];
+        for (const rec of await this.all(s)) wrapped[s].push(newKey ? { id: rec.id, ...(await encryptRecord(newKey, rec)) } : rec);
       }
-    } catch (e) { this.key = oldKey; throw e; }
+      this.key = newKey || null;   // writes queued behind this transaction must already use the new key
+      try {
+        const tx = this.db.transaction([...ENCRYPTED_STORES, 'settings'], 'readwrite');
+        const done = new Promise((resolve, reject) => {
+          tx.oncomplete = () => resolve();
+          tx.onerror = () => reject(tx.error || new Error('The local database rejected the change.'));
+          tx.onabort = () => reject(tx.error || new Error('The local database change was aborted.'));
+        });
+        for (const s of ENCRYPTED_STORES) { const os = tx.objectStore(s); for (const rec of wrapped[s]) os.put(rec); }
+        if (meta) tx.objectStore('settings').put({ id: 'vault', value: meta }); else tx.objectStore('settings').delete('vault');
+        await done;
+      } catch (e) { this.key = oldKey; throw e; }
+      this.vaultMeta = meta || null;
+    };
+    this.rekeying = run();
+    try { await this.rekeying; } finally { this.rekeying = null; }
     this.emit('*', null);
+    this.post({ type: 'vault' });
   }
 
   /** Detect whether any stored record is encrypted (used when vault metadata is missing or inconsistent). */
@@ -104,6 +145,7 @@ export class Store {
     await this.open();
     for (const s of STORES) await this.req(this.tx(s, 'readwrite').clear());
     this.emit('*', null);
+    this.post({ type: 'vault' });
   }
 }
 

@@ -5,29 +5,41 @@ import { inspectDocx, describeTemplateError, isDocxError } from '../../lib/rende
 import { checkExpression } from '../../lib/logic.js';
 import { renderForm } from '../../lib/form.js';
 import { FUNCTION_NAMES } from '../../lib/expr.js';
+import { checkDocxSize } from '../../lib/backup.js';
+import { invalidTagMessages, showTemplateErrors } from './templates.js';
 
 const CURRENCIES = ['', 'USD', 'EUR', 'GBP', 'CAD', 'AUD', 'CHF', 'JPY', 'INR', 'SGD', 'NZD', 'ZAR', 'BRL', 'MXN', 'SEK', 'NOK', 'DKK'];
 
 export async function render(ctx, { id }) {
   const stored = await ctx.templates.get(id);
   if (!stored) { setChildren(ctx.main, h('div.empty', h('h2', 'Template not found'), h('a.btn', { href: '#/templates' }, 'Back to templates'))); return; }
-  const t = normalizeTemplate(structuredClone(stored));
+  // edits that were in progress when the workspace locked come back after unlock instead of the stored record;
+  // ctx.dirty is still true then, and false once the user chose "Discard" on the way here
+  const pending = ctx.dirty ? ctx.pendingEdits.get(id) : null;
+  ctx.pendingEdits.delete(id);
+  const t = pending ? pending.template : normalizeTemplate(structuredClone(stored));
+  let pendingBytes = pending ? pending.docx : null;   // a replacement .docx, written together with the template on Save
   setTitle(t.name);
   let selected = null;           // { field, parent } where parent is a repeat group for children
   let tab = 'fields';
-  ctx.dirty = false;
+  ctx.dirty = !!pending;
   const markDirty = () => { ctx.dirty = true; saveBtn.disabled = false; };
+  ctx.lockHooks.add(async () => { if (ctx.dirty) ctx.pendingEdits.set(id, { template: t, docx: pendingBytes }); });
+  const heading = h('h1.sr-only', t.name);
 
   // ---------------------------------------------------------------- header
-  const nameInput = h('input.input', { value: t.name, 'aria-label': 'Template name', oninput: (e) => { t.name = e.target.value; markDirty(); } });
+  const nameInput = h('input.input', { value: t.name, 'aria-label': 'Template name', oninput: (e) => { t.name = e.target.value; heading.textContent = t.name; markDirty(); } });
   const catSelect = h('select.select', { 'aria-label': 'Category', onchange: (e) => { t.category = e.target.value; markDirty(); } }, CATEGORIES.map((c) => h('option', { value: c, selected: c === t.category }, c)));
   const descInput = h('input.input', { value: t.description, placeholder: 'Short description shown on the template card', 'aria-label': 'Description', oninput: (e) => { t.description = e.target.value; markDirty(); } });
-  const saveBtn = h('button.btn.btn-primary', { type: 'button', disabled: true, onclick: save }, icon('check', 16), 'Save');
+  const saveBtn = h('button.btn.btn-primary', { type: 'button', disabled: !pending, onclick: save }, icon('check', 16), 'Save');
 
   async function save() {
     const problems = validateTemplate(t);
     if (problems.length) { modal({ title: 'Fix these before saving', body: h('ul', problems.map((p) => h('li', p))), actions: [{ label: 'OK', primary: true }] }); return false; }
+    // the document first, then the questionnaire that describes it, so a stored template never points at tags it does not know
+    if (pendingBytes) { await ctx.templates.saveFile(t.id, pendingBytes); pendingBytes = null; }
     await ctx.templates.save(t);
+    ctx.pendingEdits.delete(id);
     ctx.dirty = false; saveBtn.disabled = true;
     toast('Template saved.', { type: 'ok' });
     return true;
@@ -36,36 +48,52 @@ export async function render(ctx, { id }) {
   async function replaceFile() {
     const file = await pickFile('.docx'); if (!file) return;
     const bytes = await readFile(file);
+    try { checkDocxSize(bytes); } catch (e) { showTemplateErrors([e.message]); return; }
     let insp;
     try { insp = inspectDocx(bytes); } catch (e) { if (isDocxError(e)) modal({ title: 'The document has a problem', body: h('ul', describeTemplateError(e).map((m) => h('li', m))), actions: [{ label: 'OK', primary: true }] }); else toast('This file could not be opened.', { type: 'danger' }); return; }
-    await ctx.templates.saveFile(t.id, bytes);
-    t.fileName = file.name; t.tags = insp.order.map((o) => o.key);
-    mergeTags(insp);
-    markDirty(); toast('Document replaced. New tags were added as fields; removed tags are flagged.', { type: 'ok', timeout: 6000 });
+    const badTags = invalidTagMessages(insp);
+    if (badTags.length) { showTemplateErrors(badTags); return; }
+    // nothing is stored until Save: the file and the questionnaire are written together, so discarding discards both
+    pendingBytes = bytes;
+    t.fileName = file.name; t.tags = insp.order.map((o) => o.key); docTags = new Set(t.tags);
+    const { added, blocked } = mergeTags(insp);
+    markDirty();
+    toast(added ? `Document replaced. ${added} new field${added === 1 ? ' was' : 's were'} added; removed tags are flagged. Save to keep it.` : 'Document replaced. Save to keep it.', { type: 'ok', timeout: 6000 });
+    for (const m of blocked) toast(m, { type: 'warn', timeout: 8000 });
     refresh();
   }
+  const currentBytes = async () => pendingBytes || ctx.templates.getFile(t.id);
 
-  /** Add fields for tags that exist in the document but not in the questionnaire. */
+  /** Add fields for tags that exist in the document but not in the questionnaire. Returns how many were added and,
+      for a repeating section whose key is already a non-repeating field, why its row tags could not be added. */
   function mergeTags(insp) {
     const q = inferQuestionnaire(insp);
-    const have = new Set(t.fields.map((f) => f.key));
-    let added = 0;
+    let added = 0; const blocked = [];
     for (const f of q.fields) {
-      if (have.has(f.key)) {
-        const mine = t.fields.find((x) => x.key === f.key);
-        if (mine.type === 'repeat' && f.type === 'repeat') for (const c of f.children) if (!mine.children.some((x) => x.key === c.key)) { mine.children.push(c); added++; }
+      const mine = t.fields.find((x) => x.key === f.key);
+      if (!mine) { f.sectionId = t.sections[0].id; t.fields.push(f); added++; continue; }
+      if (f.type !== 'repeat') continue;
+      if (mine.type !== 'repeat') {
+        const kids = (f.children || []).filter((c) => !t.fields.some((x) => x.key === c.key));
+        if (kids.length) blocked.push(`{${f.key}} must be a Repeating group for ${kids.map((c) => '{' + c.key + '}').join(', ')} to be filled in.`);
         continue;
       }
-      f.sectionId = t.sections[0].id; t.fields.push(f); added++;
+      for (const c of f.children || []) if (!mine.children.some((x) => x.key === c.key)) { mine.children.push(c); added++; }
     }
-    return added;
+    return { added, blocked };
+  }
+  /** Shared by "Add them" and "Re-scan tags": merge the document's tags and tell the user what happened. */
+  async function rescan() {
+    const { added, blocked } = mergeTags(inspectDocx(await currentBytes()));
+    if (added) { markDirty(); refresh(); }
+    if (blocked.length) toast(blocked.join(' '), { type: 'warn', timeout: 8000 });
+    else toast(added ? `${added} new field${added === 1 ? '' : 's'} added.` : 'The questionnaire already covers every tag.', { type: added ? 'ok' : 'info' });
   }
 
   // ---------------------------------------------------------------- field list
-  const docTags = new Set(t.tags || []);
-  const flatKeys = () => { const keys = []; for (const f of t.fields) { keys.push(f.key); if (f.type === 'repeat') for (const c of f.children) keys.push(f.key + '.' + c.key); } return keys; };
+  let docTags = new Set(t.tags || []);
   const unusedFields = () => t.fields.filter((f) => f.type !== 'computed' && docTags.size && !docTags.has(f.key));
-  const missingTags = () => [...docTags].filter((k) => !t.fields.some((f) => f.key === k || (f.type === 'repeat' && f.children.some((c) => c.key === k))));
+  const missingTags = () => [...docTags].filter((k) => !t.fields.some((f) => f.key === k || (f.type === 'repeat' && (f.children || []).some((c) => c.key === k))));
 
   const listEl = h('div');
   const inspectorEl = h('div.inspector.card');
@@ -87,7 +115,7 @@ export async function render(ctx, { id }) {
     const missing = missingTags();
     setChildren(listEl, 
       t.warnings && t.warnings.length ? h('div.notice.notice-warn', icon('warn'), h('div', t.warnings.map((w) => h('div', w)))) : null,
-      missing.length ? h('div.notice.notice-info', icon('info'), h('div', `Tags in the document without a question: ${missing.map((m) => '{' + m + '}').join(', ')}. `, h('button.btn.btn-sm', { type: 'button', onclick: async () => { const bytes = await ctx.templates.getFile(t.id); mergeTags(inspectDocx(bytes)); markDirty(); refresh(); } }, 'Add them'))) : null,
+      missing.length ? h('div.notice.notice-info', icon('info'), h('div', `Tags in the document without a question: ${missing.map((m) => '{' + m + '}').join(', ')}. `, h('button.btn.btn-sm', { type: 'button', onclick: rescan }, 'Add them'))) : null,
       t.sections.map((s, si) => h('div', { dataset: { sectionId: s.id } },
         h('div.section-head', h('h3', s.title), h('span.muted.small', `${t.fields.filter((f) => f.sectionId === s.id).length} fields`), h('span.grow'),
           h('button.btn.btn-ghost.btn-icon.btn-sm', { type: 'button', 'aria-label': 'Move section up', disabled: si === 0, onclick: () => { t.sections.splice(si, 1); t.sections.splice(si - 1, 0, s); markDirty(); refresh(); } }, icon('up', 14)),
@@ -126,13 +154,35 @@ export async function render(ctx, { id }) {
     t.fields.push(f); selected = { field: f, parent: null }; markDirty(); refresh();
     if (docTags.size && !docTags.has(key)) toast(`Add {${key}} to the Word document to use this answer in the output.`, { timeout: 7000 });
   }
-  async function askKey(title, placeholder) {
+  /** Ask for a new tag name; `parent` is the repeating group the field goes into (its rows are their own namespace). */
+  async function askKey(title, placeholder, parent = null) {
     const raw = await promptDialog({ title, label: 'Tag name (as it appears in the document, without braces)', placeholder, help: 'Letters, digits and underscores. Example: total_fee' });
     if (raw == null) return null;
     const key = raw.trim();
     if (!KEY_RX.test(key)) { toast('Use only letters, digits and underscores, starting with a letter.', { type: 'warn' }); return null; }
-    if (flatKeys().includes(key)) { toast('That tag name is already used.', { type: 'warn' }); return null; }
+    const taken = parent ? (parent.children || []).some((c) => c.key === key) : t.fields.some((f) => f.key === key);
+    if (taken) { toast(parent ? `That tag name is already used in this group.` : 'That tag name is already used.', { type: 'warn' }); return null; }
     return key;
+  }
+
+  /** Rebuild a field for a new type in place, keeping every setting that means the same thing on the new type. */
+  function changeType(f, nt) {
+    const keep = { label: f.label, help: f.help, sectionId: f.sectionId, showIf: f.showIf };
+    const plain = (k) => !['checkbox', 'computed', 'repeat'].includes(k);
+    const choice = (k) => k === 'select' || k === 'radio';
+    const numeric = (k) => k === 'number' || k === 'money';
+    const textLike = (k) => ['text', 'textarea', 'email', 'phone'].includes(k);
+    if (plain(f.type) && plain(nt)) keep.required = !!f.required;
+    if (choice(f.type) && choice(nt)) keep.options = f.options || [];
+    if (numeric(f.type) && numeric(nt)) { keep.min = f.min ?? null; keep.max = f.max ?? null; keep.decimals = f.decimals ?? null; if (typeof f.default === 'number') keep.default = f.default; }
+    if (textLike(f.type) && textLike(nt)) { keep.placeholder = f.placeholder || ''; if (typeof f.default === 'string' && f.default) keep.default = f.default; }
+    if (nt === 'repeat') keep.children = Array.isArray(f.children) ? f.children : [];
+    else if (f.role && f.role !== 'repeat') keep.role = f.role;
+    const nf = makeField(f.key, nt, Object.fromEntries(Object.entries(keep).filter(([, v]) => v !== undefined)));
+    if (f.role === 'condition' && nt !== 'checkbox' && nt !== 'computed') nf.role = 'value';
+    if (f.role === 'condition' && nt === 'computed') { nf.role = 'condition'; nf.format = 'boolean'; }
+    Object.keys(f).forEach((k) => delete f[k]);
+    Object.assign(f, nf);
   }
 
   // ---------------------------------------------------------------- inspector
@@ -144,14 +194,14 @@ export async function render(ctx, { id }) {
     const text = (prop, ph, cb) => h('input.input', { value: f[prop] ?? '', placeholder: ph || '', oninput: (e) => { f[prop] = e.target.value; if (cb) cb(); upd(); } });
     const num = (prop) => h('input.input', { type: 'number', value: f[prop] ?? '', oninput: (e) => { f[prop] = e.target.value === '' ? null : Number(e.target.value); upd(); } });
     const exprInput = (prop, ph) => { const err = h('span.field-error', { role: 'alert', hidden: true }); const inp = h('input.input.mono', { value: f[prop] || '', placeholder: ph, spellcheck: false, oninput: (e) => { f[prop] = e.target.value; const m = e.target.value.trim() ? checkExpression(e.target.value) : null; err.textContent = m || ''; err.hidden = !m; upd(); } }); return h('div', inp, err); };
-    const typeOptions = Object.entries(FIELD_TYPES).filter(([k]) => parent ? !['repeat'].includes(k) : true);
+    const typeOptions = Object.entries(FIELD_TYPES).filter(([k]) => (parent ? k !== 'repeat' : true) && (k !== 'computed' || f.type === 'computed' || ctx.plan.can('computed')));
     const keysHint = 'Available names: ' + (parent ? parent.children.map((c) => c.key).concat(t.fields.filter((x) => x.type !== 'repeat').map((x) => x.key)) : t.fields.map((x) => x.key)).filter((k) => k !== f.key).join(', ');
 
     setChildren(inspectorEl, 
       h('div.row.row-between', h('h3', { style: { margin: 0 } }, 'Field settings'), h('button.btn.btn-ghost.btn-icon.btn-sm', { type: 'button', 'aria-label': 'Close field settings', onclick: () => { selected = null; refresh(); } }, icon('x', 16))),
       h('p.small.mono.muted', { style: { marginTop: '.25rem' } }, '{' + (parent ? parent.key + '} › {' : '') + f.key + '}'),
       row('Label', text('label')),
-      row('Type', h('select.select', { onchange: (e) => { const nt = e.target.value; const keep = { key: f.key, label: f.label, help: f.help, sectionId: f.sectionId, showIf: f.showIf, role: f.role, children: f.children }; const nf = makeField(f.key, nt, keep); if (nt !== 'repeat') delete nf.children; if (f.role === 'condition' && nt !== 'checkbox' && nt !== 'computed') nf.role = 'value'; if (f.role === 'condition' && nt === 'computed') { nf.role = 'condition'; nf.format = 'boolean'; } Object.keys(f).forEach((k) => delete f[k]); Object.assign(f, nf); upd(); renderInspector(); } }, typeOptions.map(([k, v]) => h('option', { value: k, selected: k === f.type }, v.label))),
+      row('Type', h('select.select', { id: 'field-type', onchange: (e) => { const nt = e.target.value; if (nt === f.type) return; if (nt === 'computed' && !ctx.requirePlan('computed')) { e.target.value = f.type; return; } changeType(f, nt); upd(); renderInspector(); requestAnimationFrame(() => inspectorEl.querySelector('#field-type')?.focus()); } }, typeOptions.map(([k, v]) => h('option', { value: k, selected: k === f.type }, v.label))),
         f.role === 'condition' ? 'This tag controls a section of the document ({#' + f.key + '}…{/' + f.key + '}). Keep it as Yes / no, or make it Computed to decide from other answers.' : f.type === 'repeat' ? 'A repeating group renders its content once per item.' : null),
       f.type !== 'checkbox' && f.type !== 'computed' && f.type !== 'repeat' ? h('label.check', h('input', { type: 'checkbox', checked: !!f.required, onchange: (e) => { f.required = e.target.checked; upd(); } }), h('span', 'Required')) : null,
       row('Help text', text('help', 'Shown under the question'), null),
@@ -159,13 +209,13 @@ export async function render(ctx, { id }) {
       ['text', 'textarea', 'number', 'money', 'email', 'phone', 'date'].includes(f.type) ? row('Default answer', f.type === 'date' ? h('input.input', { type: 'date', value: f.default || '', oninput: (e) => { f.default = e.target.value || null; upd(); } }) : h('input.input', { value: f.default ?? '', oninput: (e) => { f.default = e.target.value === '' ? null : (['number', 'money'].includes(f.type) ? Number(e.target.value) : e.target.value); upd(); } })) : null,
       f.type === 'checkbox' ? row('Default', h('select.select', { onchange: (e) => { f.default = e.target.value === 'true'; upd(); } }, h('option', { value: 'false', selected: !f.default }, 'No'), h('option', { value: 'true', selected: !!f.default }, 'Yes'))) : null,
       (f.type === 'select' || f.type === 'radio') ? row('Options (one per line, "value | Label" to store a different value)', h('textarea.textarea', { rows: 5, oninput: (e) => { f.options = e.target.value.split('\n').map((l) => l.trim()).filter(Boolean).map((l) => { const [v, lab] = l.split('|').map((x) => x.trim()); return { value: v, label: lab || v }; }); upd(); } }, (f.options || []).map((o) => o.value === o.label || !o.label ? o.value : `${o.value} | ${o.label}`).join('\n'))) : null,
-      f.type === 'date' ? row('Format in document', h('select.select', { onchange: (e) => { f.format = e.target.value; upd(); } }, Object.entries(DATE_FORMATS).map(([k, ex]) => h('option', { value: k, selected: k === f.format }, `${k} · ${ex}`)))) : null,
+      f.type === 'date' ? row('Format in document', h('select.select', { onchange: (e) => { f.format = e.target.value; upd(); } }, h('option', { value: '', selected: !f.format }, 'Workspace default'), Object.entries(DATE_FORMATS).map(([k, ex]) => h('option', { value: k, selected: k === f.format }, `${k} · ${ex}`)))) : null,
       f.type === 'money' ? h('div.grid-2', row('Currency', h('select.select', { onchange: (e) => { f.currency = e.target.value; upd(); } }, CURRENCIES.map((c) => h('option', { value: c, selected: c === (f.currency || '') }, c || 'Workspace default')))), row('Decimals', num('decimals'))) : null,
       f.type === 'number' ? h('div.grid-2', row('Decimals', num('decimals')), row('Minimum', num('min')), row('Maximum', num('max'))) : null,
       f.type === 'money' ? h('div.grid-2', row('Minimum', num('min')), row('Maximum', num('max'))) : null,
       f.type === 'text' ? row('Maximum length', num('maxLength')) : null,
       f.type === 'repeat' ? h('div.grid-2', row('Item name', text('itemLabel', 'e.g. Attorney')), row('Minimum items', num('min')), row('Maximum items', num('max'))) : null,
-      f.type === 'repeat' ? h('div', h('button.btn.btn-sm', { type: 'button', onclick: async () => { const key = await askKey('New field in ' + f.label, 'email'); if (!key) return; f.children.push(makeField(key, 'text')); upd(); } }, icon('plus', 14), 'Add field to group')) : null,
+      f.type === 'repeat' ? h('div', h('button.btn.btn-sm', { type: 'button', onclick: async () => { const key = await askKey('New field in ' + f.label, 'email', f); if (!key) return; f.children.push(makeField(key, 'text')); upd(); } }, icon('plus', 14), 'Add field to group')) : null,
       f.type === 'computed' || (f.role === 'condition' && f.type === 'computed') ? row('Expression', exprInput('expr', 'e.g. sum(attorneys.rate) * 1.2'), keysHint + '. Functions: ' + FUNCTION_NAMES.join(', ')) : null,
       f.type === 'computed' && f.role !== 'condition' ? row('Show as', h('select.select', { onchange: (e) => { f.format = e.target.value; upd(); } }, ['text', 'number', 'money', 'date', 'boolean'].map((k) => h('option', { value: k, selected: k === (f.format || 'text') }, k)))) : null,
       row('Show only when', exprInput('showIf', 'e.g. has_retainer or fee_type == "flat"'), 'Leave empty to always show. ' + keysHint),
@@ -176,13 +226,14 @@ export async function render(ctx, { id }) {
   }
 
   function docInfo() {
-    return h('div.stack-sm', h('div.kv', h('dt', 'File'), h('dd', t.fileName || '—'), h('dt', 'Tags found'), h('dd', String(docTags.size)), h('dt', 'Questions'), h('dd', String(t.fields.length))),
-      h('div.row', h('button.btn.btn-sm', { type: 'button', onclick: replaceFile }, icon('upload', 14), 'Replace document'), h('button.btn.btn-sm', { type: 'button', onclick: async () => { const bytes = await ctx.templates.getFile(t.id); const added = mergeTags(inspectDocx(bytes)); if (added) { markDirty(); refresh(); } toast(added ? `${added} new field${added === 1 ? '' : 's'} added.` : 'The questionnaire already covers every tag.', { type: 'ok' }); } }, 'Re-scan tags')),
+    return h('div.stack-sm', h('dl.kv', { style: { margin: 0 } }, h('dt', 'File'), h('dd', t.fileName || '—'), h('dt', 'Tags found'), h('dd', String(docTags.size)), h('dt', 'Questions'), h('dd', String(t.fields.length))),
+      pendingBytes ? h('p.small.muted', 'The replacement document is kept with the template when you save.') : null,
+      h('div.row', h('button.btn.btn-sm', { type: 'button', onclick: replaceFile }, icon('upload', 14), 'Replace document'), h('button.btn.btn-sm', { type: 'button', onclick: rescan }, 'Re-scan tags')),
       unusedFields().length ? h('p.small.muted', 'Fields not in the document: ' + unusedFields().map((f) => f.key).join(', ')) : null);
   }
 
   // ---------------------------------------------------------------- tabs
-  const content = h('div');
+  const content = h('div#designer-panel', { role: 'tabpanel', 'aria-labelledby': 'tab-fields' });
   function renderTab() {
     if (tab === 'fields') { setChildren(content, h('div.designer', listEl, inspectorEl)); renderList(); renderInspector(); return; }
     if (tab === 'preview') {
@@ -191,14 +242,25 @@ export async function render(ctx, { id }) {
       return;
     }
     if (tab === 'text') {
-      ctx.templates.getFile(t.id).then((bytes) => { const insp = inspectDocx(bytes); setChildren(content, h('div.narrow', h('p.muted.small', 'Plain text of the document with its tags, for reference.'), h('pre', { style: { whiteSpace: 'pre-wrap', fontFamily: 'var(--mono)', fontSize: '.85rem', background: 'var(--surface)', padding: '1rem', borderRadius: 'var(--radius)', border: '1px solid var(--border)' } }, insp.text))); });
+      currentBytes().then((bytes) => { const insp = inspectDocx(bytes); setChildren(content, h('div.narrow', h('p.muted.small', 'Plain text of the document with its tags, for reference.'), h('pre', { style: { whiteSpace: 'pre-wrap', overflowWrap: 'anywhere', fontFamily: 'var(--mono)', fontSize: '.85rem', background: 'var(--surface)', padding: '1rem', borderRadius: 'var(--radius)', border: '1px solid var(--border)' } }, insp.text))); });
     }
   }
-  const tabs = h('div.tabs', { role: 'tablist' }, [['fields', 'Questions'], ['preview', 'Preview questionnaire'], ['text', 'Document text']].map(([k, label]) => h('button', { role: 'tab', 'aria-selected': tab === k ? 'true' : 'false', onclick: () => { tab = k; for (const b of tabs.children) b.setAttribute('aria-selected', b.dataset.tab === k ? 'true' : 'false'); renderTab(); }, dataset: { tab: k } }, label)));
+  const TABS = [['fields', 'Questions'], ['preview', 'Preview questionnaire'], ['text', 'Document text']];
+  function selectTab(k, focus = false) {
+    tab = k;
+    for (const b of tabs.children) { const on = b.dataset.tab === k; b.setAttribute('aria-selected', on ? 'true' : 'false'); b.tabIndex = on ? 0 : -1; if (on && focus) b.focus(); }
+    content.setAttribute('aria-labelledby', 'tab-' + k);
+    renderTab();
+  }
+  const tabs = h('div.tabs', { role: 'tablist', 'aria-label': 'Template editor', onkeydown: (e) => {
+    const keys = TABS.map(([k]) => k); const i = keys.indexOf(tab);
+    const j = e.key === 'ArrowRight' ? (i + 1) % keys.length : e.key === 'ArrowLeft' ? (i - 1 + keys.length) % keys.length : e.key === 'Home' ? 0 : e.key === 'End' ? keys.length - 1 : -1;
+    if (j < 0) return; e.preventDefault(); selectTab(keys[j], true);
+  } }, TABS.map(([k, label]) => h('button', { id: 'tab-' + k, type: 'button', role: 'tab', 'aria-selected': tab === k ? 'true' : 'false', 'aria-controls': 'designer-panel', tabindex: tab === k ? 0 : -1, onclick: () => selectTab(k), dataset: { tab: k } }, label)));
 
   function refresh() { if (tab === 'fields') { renderList(); renderInspector(); } else renderTab(); }
 
-  setChildren(ctx.main, h('div.container',
+  setChildren(ctx.main, h('div.container', heading,
     h('div.row', { style: { marginBottom: '.75rem' } }, h('a.btn.btn-ghost.btn-sm', { href: '#/templates' }, icon('back', 16), 'Templates')),
     h('div.card', { style: { marginBottom: '1rem' } }, h('div.grid-2', h('label.field', h('span.field-label', 'Template name'), nameInput), h('label.field', h('span.field-label', 'Category'), catSelect)), h('label.field', { style: { marginBottom: 0 } }, h('span.field-label', 'Description'), descInput)),
     h('div.row.row-between', { style: { marginBottom: '.5rem' } }, tabs, h('div.row', h('button.btn', { type: 'button', onclick: async () => { if (ctx.dirty && !(await save())) return; const { newDraft } = await import('../../lib/schema.js'); const d = newDraft(t); await ctx.drafts.save(d); ctx.navigate('/drafts/' + d.id); } }, icon('plus', 16), 'New draft'), saveBtn)),

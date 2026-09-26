@@ -4,6 +4,7 @@ import { h, icon, setChildren } from '../../app/ui/dom.js';
 import { renderForm } from '../../app/lib/form.js';
 import { evaluateForm } from '../../app/lib/logic.js';
 import { blankAnswers } from '../../app/lib/schema.js';
+import { sanitizeAnswers } from '../../app/lib/intake.js';
 
 export function mount(root, dataEl) {
   let data;
@@ -14,7 +15,7 @@ export function mount(root, dataEl) {
   const forms = [];
   const fileInput = h('input', { type: 'file', accept: '.json,application/json', class: 'hidden', onchange: async () => {
     const f = fileInput.files[0]; if (!f) return;
-    try { const j = JSON.parse(await f.text()); if (!j || j.format !== 'clausery.answers' || typeof j.answers !== 'object') throw new Error('not an answers file'); Object.assign(answers, j.answers); rebuild(); flash('Your saved answers were loaded.', 'ok'); }
+    try { const j = JSON.parse(await f.text()); if (!j || j.format !== 'clausery.answers' || typeof j.answers !== 'object' || !j.answers) throw new Error('not an answers file'); Object.assign(answers, sanitizeAnswers(template, j.answers).answers); rebuild(); flash('Your saved answers were loaded.', 'ok'); }
     catch { flash('That file is not a saved answers file from this form.', 'warn'); }
     fileInput.value = '';
   } });

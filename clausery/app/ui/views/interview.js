@@ -1,11 +1,13 @@
 /* Interview: answer a template's questionnaire section by section, then preview and generate the document. */
-import { h, icon, toast, modal, confirmDialog, pickFile, readFile, debounce, setTitle, announce, setChildren } from '../dom.js';
-import { renderForm } from '../../lib/form.js';
+import { h, icon, toast, modal, confirmDialog, pickFile, readFile, setTitle, announce, setChildren } from '../dom.js';
+import { renderForm, scrollBehavior } from '../../lib/form.js';
 import { evaluateForm, buildRenderData, summarize } from '../../lib/logic.js';
 import { renderDocx, previewDocx, describeTemplateError, isDocxError } from '../../lib/render.js';
 import { downloadBlob, safeFilename } from '../../lib/backup.js';
 import { nowISO } from '../../lib/schema.js';
-import { buildIntakeHtml, parseAnswersFile } from '../../lib/intake.js';
+import { buildIntakeHtml, parseAnswersFile, sanitizeAnswers } from '../../lib/intake.js';
+
+const SAVE_DELAY = 400;
 
 export async function render(ctx, { id }) {
   const draft = await ctx.drafts.get(id);
@@ -20,12 +22,42 @@ export async function render(ctx, { id }) {
   let form = null;
   let evaluation = evaluateForm(template, draft.answers, ctx.settings);
 
-  const persist = debounce(async () => { await ctx.drafts.save(draft); }, 400);
+  // Autosave: typing schedules a save; the save runs at once when the page hides, the workspace locks or the view goes.
+  let saveTimer = null, pendingSave = false, stopped = false;
+  async function flush() {
+    clearTimeout(saveTimer); saveTimer = null;
+    if (!pendingSave || stopped) return;
+    pendingSave = false;
+    try { await ctx.drafts.save(draft); }
+    catch (e) { pendingSave = true; console.error(e); toast('The draft could not be saved: ' + (e.message || e), { type: 'danger', timeout: 6000 }); }
+  }
+  function persist() { if (stopped) return; pendingSave = true; clearTimeout(saveTimer); saveTimer = setTimeout(flush, SAVE_DELAY); }
   const onChange = (answers, path, ev) => { evaluation = ev; draft.status = 'draft'; renderStepper(); persist(); };
 
-  const titleInput = h('input.input', { value: draft.title || '', placeholder: 'Draft name (optional)', 'aria-label': 'Draft name', oninput: (e) => { draft.title = e.target.value; setTitle(draft.title || template.name); persist(); } });
+  const heading = h('h1.sr-only', draft.title || template.name);
+  const titleInput = h('input.input', { value: draft.title || '', placeholder: 'Draft name (optional)', 'aria-label': 'Draft name', oninput: (e) => { draft.title = e.target.value; setTitle(draft.title || template.name); heading.textContent = draft.title || template.name; persist(); } });
   const stepperEl = h('nav.stepper', { 'aria-label': 'Sections' });
   const bodyEl = h('div');
+  const noticeEl = h('div');
+  const mounted = () => stepperEl.isConnected;
+
+  ctx.lockHooks.add(flush);
+  const onPageHide = () => { if (mounted()) flush(); else window.removeEventListener('pagehide', onPageHide); };
+  const onVisibility = () => { if (!mounted()) document.removeEventListener('visibilitychange', onVisibility); else if (document.visibilityState === 'hidden') flush(); };
+  window.addEventListener('pagehide', onPageHide);
+  document.addEventListener('visibilitychange', onVisibility);
+  // another tab deleted this draft or its template: stop writing, or the next keystroke would bring the draft back
+  const offChange = ctx.store.onChange(async (s, sid, info) => {
+    if (!mounted()) { offChange(); return; }
+    if (!info || !info.remote) return;
+    if (!((s === 'drafts' && sid === draft.id) || (s === 'templates' && sid === template.id) || s === '*')) return;
+    let gone;
+    try { gone = !(await ctx.drafts.get(draft.id)) || !(await ctx.templates.get(template.id)); } catch { return; }   // locked: the lock screen takes over
+    if (!gone || stopped) return;
+    stopped = true; pendingSave = false; clearTimeout(saveTimer);
+    setChildren(noticeEl, h('div.notice.notice-warn', { role: 'alert' }, icon('warn'), h('div', h('strong', 'This draft was deleted in another tab. '), 'Changes made here are no longer saved. Export the answers if you want to keep them.')));
+    noticeEl.scrollIntoView({ block: 'nearest' });
+  });
 
   function sectionErrors(sid) { return Object.keys(evaluation.errors).filter((p) => { const key = p.split(/[[.]/)[0]; const f = template.fields.find((x) => x.key === key); return f && f.sectionId === sid && evaluation.visible[key] !== false; }).length; }
   function sectionAnswered(sid) { return template.fields.filter((f) => f.sectionId === sid && f.type !== 'computed' && evaluation.visible[f.key] !== false).every((f) => { const v = draft.answers[f.key]; return f.type === 'checkbox' || f.type === 'repeat' || (v !== '' && v != null); }); }
@@ -34,7 +66,7 @@ export async function render(ctx, { id }) {
     const total = Object.keys(evaluation.errors).length;
     setChildren(stepperEl, 
       h('div.progress', { 'aria-hidden': 'true' }, h('div', { style: { width: Math.round(100 * (stepIndex) / (steps.length - 1)) + '%' } })),
-      h('ol', { style: { marginTop: '.75rem' } }, steps.map((s, i) => { const errs = s.id === '__review' ? 0 : sectionErrors(s.id); const done = s.id !== '__review' && !errs && sectionAnswered(s.id); return h('li', { class: [errs ? 'errors' : '', done ? 'done' : ''].join(' '), 'aria-current': i === stepIndex ? 'step' : null, tabindex: 0, onclick: () => go(i, true), onkeydown: (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); go(i, true); } } }, h('span.num', done ? icon('check', 13) : String(i + 1)), h('span', s.title), errs ? h('span.cnt', `${errs} to fix`) : null); })),
+      h('ol', { style: { marginTop: '.75rem' } }, steps.map((s, i) => { const errs = s.id === '__review' ? 0 : sectionErrors(s.id); const done = s.id !== '__review' && !errs && sectionAnswered(s.id); const name = `${s.title}${errs ? `, ${errs} answer${errs === 1 ? '' : 's'} to fix` : done ? ', complete' : ''}`; return h('li', { class: [errs ? 'errors' : '', done ? 'done' : ''].join(' ') }, h('button.step', { type: 'button', 'aria-current': i === stepIndex ? 'step' : null, 'aria-label': name, onclick: () => go(i, true) }, h('span.num', done ? icon('check', 13) : String(i + 1)), h('span', s.title), errs ? h('span.cnt', { 'aria-hidden': 'true' }, `${errs} to fix`) : null)); })),
       total ? h('p.small.muted', { style: { marginTop: '.75rem' } }, `${total} answer${total === 1 ? '' : 's'} still needed.`) : h('p.small', { style: { marginTop: '.75rem', color: 'var(--ok)' } }, 'All required answers are in.'),
     );
   }
@@ -42,7 +74,7 @@ export async function render(ctx, { id }) {
   function go(i, force = false) {
     if (i < 0 || i >= steps.length) return;
     if (i > stepIndex && form && !force) { form.setShowErrors(true); if (sectionErrors(steps[stepIndex].id) && form.focusFirstError()) { toast('Complete the highlighted answers, or use the section list to skip ahead.', { type: 'warn' }); return; } }
-    stepIndex = i; sessionStorage.setItem('clausery.step.' + id, String(i)); renderStep(); window.scrollTo({ top: 0, behavior: 'smooth' });
+    stepIndex = i; sessionStorage.setItem('clausery.step.' + id, String(i)); renderStep(); window.scrollTo({ top: 0, behavior: scrollBehavior() });
   }
 
   function renderStep() {
@@ -60,8 +92,8 @@ export async function render(ctx, { id }) {
     const { data, evaluation: ev } = buildRenderData(template, draft.answers, ctx.settings);
     evaluation = ev;
     const errs = Object.entries(ev.errors).filter(([p]) => ev.visible[p.split(/[[.]/)[0]] !== false);
-    const previewWrap = h('div.preview-wrap.print-area', { hidden: true });
-    const previewBtn = h('button.btn', { type: 'button', onclick: async () => { previewBtn.disabled = true; try { const blob = renderDocx(bytes, data); previewWrap.hidden = false; await previewDocx(blob, previewWrap); previewWrap.scrollIntoView({ behavior: 'smooth', block: 'start' }); } catch (e) { fail(e); } finally { previewBtn.disabled = false; } } }, icon('eye', 16), 'Preview');
+    const previewWrap = h('div.preview-wrap.print-area', { hidden: true, tabindex: 0, role: 'region', 'aria-label': 'Document preview' });
+    const previewBtn = h('button.btn', { type: 'button', onclick: async () => { previewBtn.disabled = true; try { const blob = renderDocx(bytes, data); previewWrap.hidden = false; await previewDocx(blob, previewWrap); previewWrap.focus({ preventScroll: true }); previewWrap.scrollIntoView({ behavior: scrollBehavior(), block: 'start' }); } catch (e) { fail(e); } finally { previewBtn.disabled = false; } } }, icon('eye', 16), 'Preview');
     const fail = (e) => { if (isDocxError(e)) modal({ title: 'The document could not be generated', body: h('ul', describeTemplateError(e).map((m) => h('li', m))), actions: [{ label: 'OK', primary: true }] }); else { console.error(e); toast('Generation failed: ' + (e.message || e), { type: 'danger', timeout: 8000 }); } };
     const generate = async () => {
       try {
@@ -96,9 +128,9 @@ export async function render(ctx, { id }) {
     try {
       const { answers, templateName } = parseAnswersFile(await readFile(file, 'text'));
       if (templateName && templateName !== template.name && !await confirmDialog({ title: 'Different template', message: `These answers were collected for "${templateName}". Import them into this ${template.name} draft anyway?`, confirmLabel: 'Import' })) return;
-      let n = 0;
-      for (const f of template.fields) if (Object.prototype.hasOwnProperty.call(answers, f.key)) { draft.answers[f.key] = answers[f.key]; n++; }
-      await ctx.drafts.save(draft); evaluation = evaluateForm(template, draft.answers, ctx.settings);
+      const { answers: clean, count: n } = sanitizeAnswers(template, answers);
+      Object.assign(draft.answers, clean);
+      draft.status = 'draft'; pendingSave = true; await flush(); evaluation = evaluateForm(template, draft.answers, ctx.settings);
       toast(`${n} answer${n === 1 ? '' : 's'} imported.`, { type: 'ok' }); renderStep();
     } catch (e) { toast(e.message, { type: 'danger', timeout: 7000 }); }
   }
@@ -117,8 +149,9 @@ export async function render(ctx, { id }) {
     await m.closed;
   }
 
-  setChildren(ctx.main, h('div.container',
+  setChildren(ctx.main, h('div.container', heading,
     h('div.row.row-between', { style: { marginBottom: '1rem' } }, h('div.row', h('a.btn.btn-ghost.btn-sm', { href: '#/drafts' }, icon('back', 16), 'Drafts'), h('span.badge', template.name)), h('div', { style: { minWidth: '260px' } }, titleInput)),
+    noticeEl,
     h('div.interview', stepperEl, bodyEl),
   ));
   renderStep();

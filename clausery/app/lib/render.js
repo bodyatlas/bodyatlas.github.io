@@ -13,28 +13,71 @@ function nullGetter(part) {
   return '';
 }
 
-export function inspectDocx(bytes) {
+const PART_RX = /^word\/(document|header\d*|footer\d*|footnotes|endnotes)\.xml$/;
+const PART_LABEL = { document: 'body', header: 'header', footer: 'footer', footnotes: 'footnote', endnotes: 'endnote' };
+export const partLabel = (file) => PART_LABEL[(PART_RX.exec(file) || [])[1]?.replace(/\d+$/, '')] || file;
+
+/* A section tag alone in its paragraph ("{#has_guarantor}" on its own line) is removed together with the paragraph by the
+   engine's paragraphLoop, but only when the tag is the paragraph's sole content: a stray space or tab after it (very common
+   in Word) leaves an empty paragraph behind. Trim that whitespace in the XML before the engine sees it. */
+const LONE_TAG_RX = /^\s*\{[#^/][^{}]*\}\s*$/;
+export function tidyLoneSectionTags(xml) {
+  return xml.replace(/<w:p(?:\s[^>]*[^/>])?>[\s\S]*?<\/w:p>/g, (para) => {
+    const runs = [...para.matchAll(/<w:t(?:\s[^>]*)?>([^<]*)<\/w:t>/g)];
+    const text = runs.map((m) => m[1]).join('');
+    if (!runs.length || !LONE_TAG_RX.test(text)) return para;
+    const keepFrom = text.length - text.trimStart().length, keepTo = text.trimEnd().length;
+    let pos = 0;
+    return para.replace(/<w:tab\/>/g, '').replace(/(<w:t(?:\s[^>]*)?>)([^<]*)<\/w:t>/g, (m, open, t) => {
+      const from = Math.min(Math.max(keepFrom - pos, 0), t.length), to = Math.min(Math.max(keepTo - pos, 0), t.length);
+      pos += t.length;
+      return open + t.slice(from, to) + '</w:t>';
+    });
+  });
+}
+
+function loadZip(bytes) {
   const zip = new PizZip(bytes);
+  for (const name of Object.keys(zip.files)) {
+    if (!PART_RX.test(name) || zip.files[name].dir) continue;
+    const xml = zip.file(name).asText();
+    const tidy = tidyLoneSectionTags(xml);
+    if (tidy !== xml) zip.file(name, tidy);
+  }
+  return zip;
+}
+
+export function inspectDocx(bytes) {
+  const zip = loadZip(bytes);
   const im = InspectModule();
   const doc = new Docxtemplater(zip, { ...OPTIONS, modules: [im], nullGetter });
-  const structured = im.getStructuredTags();
-  const order = [];      // document order, with the chain of enclosing sections for each tag
+  // every templated part: the body first, then headers, footers, footnotes and endnotes (tags work anywhere in the document)
+  const files = Object.keys(im.fullInspected).filter((f) => PART_RX.test(f) && im.fullInspected[f].postparsed);
+  const rank = (f) => ['body', 'header', 'footer', 'footnote', 'endnote'].indexOf(partLabel(f));
+  files.sort((a, b) => rank(a) - rank(b) || (a < b ? -1 : 1));
+  const order = [];      // document order, with the chain of enclosing sections for each tag and the part it lives in
   const inverted = new Set();
-  const walk = (parts, ancestors) => {
+  const walk = (parts, ancestors, file) => {
     for (const p of parts) {
       if (p.type !== 'placeholder' || !p.value) continue;
       if (p.inverted) inverted.add(p.value);
       const parent = ancestors.length ? ancestors[ancestors.length - 1].key : null;
-      order.push({ key: p.value, parent, ancestors, section: !!p.subparsed, inverted: !!p.inverted, lIndex: p.lIndex });
-      if (p.subparsed) walk(p.subparsed, [...ancestors, { key: p.value, inverted: !!p.inverted }]);
+      order.push({ key: p.value, parent, ancestors, section: !!p.subparsed, inverted: !!p.inverted, lIndex: p.lIndex, file, part: partLabel(file) });
+      if (p.subparsed) walk(p.subparsed, [...ancestors, { key: p.value, inverted: !!p.inverted }], file);
     }
   };
-  walk(structured, []);
-  return { tags: im.getAllTags(), order, inverted: [...inverted], text: doc.getFullText() };
+  for (const file of files) walk(im.getStructuredTags(file), [], file);
+  const texts = [];
+  for (const file of files) {
+    const text = (file === 'word/document.xml' ? doc.getFullText() : doc.getFullText(file)).trim();
+    if (!text) continue;
+    texts.push(file === 'word/document.xml' ? text : `[${partLabel(file)}] ${text}`);
+  }
+  return { tags: im.getAllTags(), order, inverted: [...inverted], text: texts.join('\n\n') };
 }
 
 export function renderDocx(bytes, data) {
-  const zip = new PizZip(bytes);
+  const zip = loadZip(bytes);
   const doc = new Docxtemplater(zip, { ...OPTIONS, nullGetter });
   doc.render(data);
   return doc.getZip().generate({ type: 'blob', mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', compression: 'DEFLATE' });

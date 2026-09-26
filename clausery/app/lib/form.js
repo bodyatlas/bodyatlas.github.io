@@ -5,6 +5,9 @@ import { evaluateForm } from './logic.js';
 import { blankRow } from './schema.js';
 import { formatValue } from './logic.js';
 
+/** Animated scrolling only for people who have not asked the OS for reduced motion. */
+export const scrollBehavior = () => (globalThis.matchMedia && globalThis.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth');
+
 const CURRENCY_SYMBOLS = { USD: '$', EUR: '€', GBP: '£', CAD: 'CA$', AUD: 'A$', CHF: 'CHF', JPY: '¥', INR: '₹', SGD: 'S$', NZD: 'NZ$', ZAR: 'R', BRL: 'R$', MXN: 'MX$', SEK: 'kr', NOK: 'kr', DKK: 'kr' };
 
 /**
@@ -51,8 +54,9 @@ export function renderForm({ template, answers, settings = {}, sectionId = null,
         return { input, el: h('label.check', { for: id }, input, h('span', field.label, field.required ? h('span.req', { 'aria-hidden': 'true' }, '*') : null)), inline: true };
       }
       case 'computed': {
-        const box = h('div.computed-value', { id, 'aria-live': 'polite' });
-        return { input: box, el: box, computed: true };
+        // a <label for> cannot point at a div, so the value box names itself from the label element
+        const box = h('div.computed-value', { id, role: 'status', 'aria-live': 'polite', 'aria-labelledby': id + '_label' });
+        return { input: box, el: box, computed: true, labelledBy: true };
       }
       default: input = h('input.input', { ...common, type: 'text', autocomplete: 'off', placeholder: field.placeholder || '', maxlength: field.maxLength || null, value: val ?? '', oninput: (e) => { set(e.target.value); changed(path); } });
     }
@@ -122,7 +126,7 @@ export function renderForm({ template, answers, settings = {}, sectionId = null,
     update,
     setShowErrors(v) { showAll = v; update(evaluateForm(template, answers, settings)); },
     focusFirstError() {
-      for (const [, n] of nodes) if (!n.error.hidden && n.input && n.input.focus) { n.input.focus(); n.wrap.scrollIntoView({ block: 'center', behavior: 'smooth' }); return true; }
+      for (const [, n] of nodes) if (!n.error.hidden && n.input && n.input.focus) { n.input.focus(); n.wrap.scrollIntoView({ block: 'center', behavior: scrollBehavior() }); return true; }
       return false;
     },
   };

@@ -33,6 +33,7 @@ test('inference from the engagement letter: repeat group, conditions, types, sec
   assert.equal(byKey.retainer_amount.type, 'money');
   assert.equal(byKey.retainer_amount.showIf, 'has_retainer');
   assert.equal(byKey.flat_fee_terms.showIf, 'fee_flat');
+  assert.equal(byKey.flat_fee_terms.type, 'textarea');   // "payable upon signing": free text, not money
   assert.equal(byKey.client_name.showIf, '');
   const offer = Object.fromEntries(inferQuestionnaire(inspectDocx(load('offer-letter'))).fields.map((f) => [f.key, f]));
   assert.equal(offer.office_location.showIf, 'not is_remote');   // inside {^is_remote}

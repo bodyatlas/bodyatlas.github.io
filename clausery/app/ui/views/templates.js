@@ -1,7 +1,7 @@
 import { h, icon, toast, modal, confirmDialog, pickFile, readFile, relativeTime, setChildren } from '../dom.js';
 import { inspectDocx, describeTemplateError, isDocxError } from '../../lib/render.js';
-import { inferQuestionnaire, newTemplate, newDraft, normalizeTemplate, uid } from '../../lib/schema.js';
-import { decodeBundle, encodePack, downloadBlob, safeFilename } from '../../lib/backup.js';
+import { inferQuestionnaire, newTemplate, newDraft, normalizeTemplate, uid, KEY_RX, isReservedKey } from '../../lib/schema.js';
+import { decodeBundle, encodePack, downloadBlob, safeFilename, checkDocxSize } from '../../lib/backup.js';
 
 const SAMPLES = [
   { file: 'mutual-nda.docx', name: 'Mutual NDA', category: 'Legal', description: 'Two-party confidentiality agreement with optional carve-outs, jurisdiction and notice emails.' },
@@ -14,18 +14,28 @@ export async function importDocxFile(ctx, file, { name } = {}) {
   if (!ctx.requirePlan('templates', { count })) return null;
   if (!/\.docx$/i.test(file.name || name || '')) { toast('Choose a Word document (.docx). Older .doc files must be re-saved as .docx first.', { type: 'warn', timeout: 7000 }); return null; }
   const bytes = await readFile(file);
+  try { checkDocxSize(bytes); } catch (e) { showTemplateErrors([e.message]); return null; }
   let inspection;
   try { inspection = inspectDocx(bytes); }
   catch (e) {
     if (isDocxError(e)) { showTemplateErrors(describeTemplateError(e)); return null; }
     toast('This file could not be opened as a Word document.', { type: 'danger' }); console.error(e); return null;
   }
+  const badTags = invalidTagMessages(inspection);
+  if (badTags.length) { showTemplateErrors(badTags); return null; }
   const q = inferQuestionnaire(inspection);
   const t = newTemplate({ name: name || file.name.replace(/\.docx$/i, '').replace(/[-_]+/g, ' '), fileName: file.name, sections: q.sections, fields: q.fields, tags: inspection.order.map((o) => o.key), warnings: q.warnings });
   await ctx.templates.save(t);
   await ctx.templates.saveFile(t.id, bytes);
   if (!q.fields.length) toast('No {tags} were found in this document. Add tags like {client_name} in Word, then replace the file in the template editor.', { type: 'warn', timeout: 9000 });
   return t;
+}
+
+/** Tags whose names the questionnaire cannot use (spaces, hyphens, dots): told at upload, so the author fixes Word first
+    instead of finding out when the designer refuses to save. */
+export function invalidTagMessages(inspection) {
+  const bad = [...new Set((inspection.order || []).map((o) => o.key).filter((k) => !isReservedKey(k) && !KEY_RX.test(k)))];
+  return bad.map((k) => { const fixed = String(k).replace(/[^A-Za-z0-9_]+/g, '_').replace(/^[^A-Za-z]+/, '') || 'tag_name'; return `The tag {${k}} has characters that are not allowed. Tag names use letters, digits and underscores and start with a letter, for example {${fixed}}.`; });
 }
 
 export function showTemplateErrors(messages) {
@@ -85,7 +95,7 @@ export async function render(ctx) {
   setChildren(ctx.main, h('div.container',
     h('div.page-head', h('div', h('h1', 'Templates'), h('p.sub', 'Your Word templates, turned into guided questionnaires.')),
       h('div.row', h('button.btn', { type: 'button', onclick: () => importPack(ctx) }, icon('download', 16), 'Import pack'), h('button.btn.btn-primary', { type: 'button', onclick: async () => { const f = await pickFile('.docx'); if (f) upload(f); } }, icon('upload', 16), 'Upload .docx'))),
-    templates.length ? h('div.cards', templates.map(card)) : h('div.empty', h('h2', 'No templates yet'), h('p', 'Upload one of your own Word documents with {tags}, or start from a sample to see how it works.')),
+    templates.length ? [h('h2.sr-only', 'Your templates'), h('div.cards', templates.map(card))] : h('div.empty', h('h2', 'No templates yet'), h('p', 'Upload one of your own Word documents with {tags}, or start from a sample to see how it works.')),
     h('div', { style: { marginTop: '1.5rem' } }, drop),
     h('h2', { style: { marginTop: '2rem' } }, 'Start from a sample'),
     h('div.cards', SAMPLES.map((s) => h('article.card.card-sm', h('span.badge', s.category), h('h3', { style: { marginTop: '.5rem' } }, s.name), h('p.meta', s.description), h('div.card-actions', h('button.btn.btn-sm', { type: 'button', onclick: () => loadSample(ctx, s) }, icon('plus', 15), 'Use this sample'))))),
@@ -94,7 +104,7 @@ export async function render(ctx) {
 
 function moreMenu(ctx, t) {
   const m = modal({ title: t.name, size: 'sm', body: h('div.stack-sm',
-    h('button.btn', { type: 'button', style: { width: '100%', justifyContent: 'flex-start' }, onclick: async () => { m.close(); const copy = { ...structuredClone(t), id: uid('t_'), name: t.name + ' (copy)' }; await ctx.templates.save(copy); await ctx.templates.saveFile(copy.id, await ctx.templates.getFile(t.id)); toast('Template duplicated.', { type: 'ok' }); ctx.router.resolve(); } }, icon('copy', 16), 'Duplicate'),
+    h('button.btn', { type: 'button', style: { width: '100%', justifyContent: 'flex-start' }, onclick: async () => { m.close(); if (!ctx.requirePlan('templates', { count: await ctx.templates.count() })) return; const copy = { ...structuredClone(t), id: uid('t_'), name: t.name + ' (copy)' }; await ctx.templates.save(copy); await ctx.templates.saveFile(copy.id, await ctx.templates.getFile(t.id)); toast('Template duplicated.', { type: 'ok' }); ctx.router.resolve(); } }, icon('copy', 16), 'Duplicate'),
     h('button.btn', { type: 'button', style: { width: '100%', justifyContent: 'flex-start' }, onclick: async () => { m.close(); if (!ctx.requirePlan('packs')) return; const bytes = await ctx.templates.getFile(t.id); const pack = encodePack({ templates: [t], files: [{ id: t.id, bytes }], appVersion: ctx.version, name: t.name }); downloadBlob(new Blob([JSON.stringify(pack)], { type: 'application/json' }), safeFilename(t.name, 'clausery-pack.json')); } }, icon('share', 16), 'Export as template pack'),
     h('button.btn', { type: 'button', style: { width: '100%', justifyContent: 'flex-start' }, onclick: async () => { m.close(); const bytes = await ctx.templates.getFile(t.id); if (bytes) downloadBlob(new Blob([bytes], { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' }), t.fileName || safeFilename(t.name, 'docx')); } }, icon('file', 16), 'Download original .docx'),
     h('button.btn.btn-danger', { type: 'button', style: { width: '100%', justifyContent: 'flex-start' }, onclick: async () => { m.close(); const n = (await ctx.drafts.list()).filter((d) => d.templateId === t.id).length; const ok = await confirmDialog({ title: 'Delete template?', message: n ? `"${t.name}" and its ${n} draft${n === 1 ? '' : 's'} will be deleted from this device.` : `"${t.name}" will be deleted from this device.`, confirmLabel: 'Delete', danger: true }); if (!ok) return; for (const d of (await ctx.drafts.list()).filter((d) => d.templateId === t.id)) await ctx.drafts.remove(d.id); await ctx.templates.remove(t.id); toast('Template deleted.'); ctx.router.resolve(); } }, icon('trash', 16), 'Delete'),

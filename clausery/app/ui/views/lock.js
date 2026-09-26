@@ -11,7 +11,7 @@ export async function render(ctx, { onUnlocked }) {
       if (meta.missing) throw new Error('The vault settings are missing but records are encrypted. Restore a backup or wipe the workspace.');
       const key = await unlockVault(meta, input.value);
       if (!key) { err.textContent = 'That passphrase is not correct.'; err.hidden = false; input.select(); }
-      else { ctx.store.setKey(key); ctx.renderStatus(); onUnlocked(); return; }
+      else { ctx.store.setKey(key); ctx.renderStatus(); ctx.armIdle(); onUnlocked(); return; }
     } catch (ex) { err.textContent = ex.message; err.hidden = false; }
     finally { busy = false; btn.disabled = false; btn.textContent = 'Unlock'; }
   } },

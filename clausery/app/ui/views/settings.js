@@ -35,7 +35,7 @@ export async function render(ctx) {
     licenseBox,
     h('ul.feature-list', { style: { margin: '1rem 0' } }, Object.entries(FEATURE_LABELS).map(([k, l]) => h('li', ctx.plan.can(k) ? icon('check', 16) : h('span', { style: { width: '16px', display: 'inline-block', color: 'var(--muted)' } }, '·'), l))),
     h('div.stack-sm', row('License key', keyInput), h('div.row',
-      h('button.btn.btn-primary', { type: 'button', onclick: async () => { const res = await ctx.setLicense(keyInput.value.trim()); if (res.ok) { toast(`${ctx.plan.name} plan activated.`, { type: 'ok' }); keyInput.value = ''; ctx.router.resolve(); } else toast(res.error, { type: 'danger', timeout: 8000 }); } }, icon('key', 16), 'Activate'),
+      h('button.btn.btn-primary', { type: 'button', onclick: async () => { const k = keyInput.value.trim(); if (!k) { toast('Paste a license key first.', { type: 'warn' }); keyInput.focus(); return; } const res = await ctx.setLicense(k); if (res.ok) { toast(`${ctx.plan.name} plan activated.`, { type: 'ok' }); keyInput.value = ''; ctx.router.resolve(); } else toast(res.error, { type: 'danger', timeout: 8000 }); } }, icon('key', 16), 'Activate'),
       ctx.plan.payload ? h('button.btn.btn-ghost', { type: 'button', onclick: async () => { if (!await confirmDialog({ title: 'Remove license?', message: 'This browser goes back to the Free plan. Your templates and drafts are untouched.', confirmLabel: 'Remove' })) return; await ctx.setLicense(''); toast('License removed.'); ctx.router.resolve(); } }, 'Remove license') : null)));
 
   // ---- security / vault
@@ -49,13 +49,20 @@ export async function render(ctx) {
       actions: [{ label: 'Cancel', value: null }, { label: 'Continue', primary: true, onClick: () => { if (p1.value.length < 8) { err.textContent = 'Use at least 8 characters.'; err.hidden = false; return false; } if (confirm && p1.value !== p2.value) { err.textContent = 'The passphrases do not match.'; err.hidden = false; return false; } return p1.value; } }] });
     return m.closed;
   }
+  // rekey writes the re-encrypted records and the vault metadata in one transaction, so a failure changes nothing
+  async function applyVault(key, meta, okMessage) {
+    try { await ctx.store.rekey(key, meta); }
+    catch (e) { console.error(e); toast('Could not change the encryption settings (' + (e.message || e) + '). Nothing was changed.', { type: 'danger', timeout: 8000 }); return false; }
+    ctx.renderStatus(); toast(okMessage, { type: 'ok' }); ctx.router.resolve();
+    return true;
+  }
   const security = section('security', 'Security', 'Encrypt everything stored in this browser with a passphrase (AES-256-GCM, key derived with PBKDF2). The workspace locks after inactivity.',
     vaultOn ? h('div.notice.notice-ok', icon('lock'), h('div', h('strong', 'Encryption is on. '), 'Templates, documents and drafts are encrypted at rest on this device.')) : h('div.notice', icon('unlock'), h('div', h('strong', 'Encryption is off. '), 'Data is stored in the browser\'s local database in clear text (still only on this device).')),
     h('div.row', { style: { marginTop: '1rem' } },
-      !vaultOn ? h('button.btn.btn-primary', { type: 'button', onclick: async () => { if (!ctx.requirePlan('vault')) return; const pass = await askPassphrase('Turn on encryption'); if (!pass) return; const { meta, key } = await createVault(pass); await ctx.store.rekey(key); await ctx.store.setSetting('vault', meta); ctx.store.vaultMeta = meta; ctx.renderStatus(); toast('Encryption enabled.', { type: 'ok' }); ctx.router.resolve(); } }, icon('lock', 16), 'Turn on encryption') : null,
-      vaultOn ? h('button.btn', { type: 'button', onclick: async () => { const pass = await askPassphrase('New passphrase'); if (!pass) return; const { meta, key } = await createVault(pass); await ctx.store.rekey(key); await ctx.store.setSetting('vault', meta); ctx.store.vaultMeta = meta; toast('Passphrase changed.', { type: 'ok' }); } }, 'Change passphrase') : null,
+      !vaultOn ? h('button.btn.btn-primary', { type: 'button', onclick: async () => { if (!ctx.requirePlan('vault')) return; const pass = await askPassphrase('Turn on encryption'); if (!pass) return; const { meta, key } = await createVault(pass); await applyVault(key, meta, 'Encryption enabled.'); } }, icon('lock', 16), 'Turn on encryption') : null,
+      vaultOn ? h('button.btn', { type: 'button', onclick: async () => { const pass = await askPassphrase('New passphrase'); if (!pass) return; const { meta, key } = await createVault(pass); await applyVault(key, meta, 'Passphrase changed.'); } }, 'Change passphrase') : null,
       vaultOn ? h('button.btn', { type: 'button', onclick: () => ctx.lock() }, icon('lock', 16), 'Lock now') : null,
-      vaultOn ? h('button.btn.btn-ghost', { type: 'button', onclick: async () => { const pass = await askPassphrase('Confirm passphrase to turn encryption off', false); if (!pass) return; const key = await unlockVault(ctx.store.vaultMeta, pass); if (!key) { toast('That passphrase is not correct.', { type: 'danger' }); return; } await ctx.store.rekey(null); await ctx.store.delete('settings', 'vault'); ctx.store.vaultMeta = null; ctx.renderStatus(); toast('Encryption turned off.'); ctx.router.resolve(); } }, 'Turn off') : null),
+      vaultOn ? h('button.btn.btn-ghost', { type: 'button', onclick: async () => { const pass = await askPassphrase('Confirm passphrase to turn encryption off', false); if (!pass) return; const key = await unlockVault(ctx.store.vaultMeta, pass); if (!key) { toast('That passphrase is not correct.', { type: 'danger' }); return; } await applyVault(null, null, 'Encryption turned off.'); } }, 'Turn off') : null),
     vaultOn ? row('Lock after inactivity', h('select.select', { style: { maxWidth: '240px' }, onchange: (e) => ctx.saveSettings({ autoLockMinutes: Number(e.target.value) }) }, [[0, 'Never'], [5, '5 minutes'], [15, '15 minutes'], [30, '30 minutes'], [60, '1 hour']].map(([v, l]) => h('option', { value: v, selected: Number(s.autoLockMinutes) === v }, l)))) : null);
 
   // ---- data

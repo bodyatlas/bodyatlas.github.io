@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { evaluate, validate, references, compile, numberToWords, formatDate } from '../../app/lib/expr.js';
+import { evaluate, validate, references, referenceDetails, compile, numberToWords, formatDate, parseDate } from '../../app/lib/expr.js';
 
 test('literals and arithmetic', () => {
   assert.equal(evaluate('1 + 2 * 3'), 7);
@@ -11,7 +11,13 @@ test('literals and arithmetic', () => {
   assert.equal(evaluate('-5 + 2'), -3);
   assert.equal(evaluate('"a" + "b"'), 'ab');
   assert.equal(evaluate('"Total: " + 5'), 'Total: 5');
-  assert.equal(evaluate('"5" + 5'), 10);
+  assert.equal(evaluate('"5" + 5'), '55');            // + joins text whenever either side is text (docs/logic.html)
+  assert.equal(evaluate('area_code + phone_local', { area_code: '415', phone_local: '5551234' }), '4155551234');
+  assert.equal(evaluate('unit + " " + street', { unit: '12', street: 'Main St' }), '12 Main St');
+  assert.equal(evaluate('a + b', { a: 12, b: 34 }), 46);   // Number and Money answers are real numbers
+  assert.equal(evaluate('a + b', { a: null, b: 34 }), 34);
+  assert.equal(evaluate('10 - 2 - 3'), 5);
+  assert.equal(evaluate('2 * 3 % 4'), 2);
 });
 
 test('identifiers resolve only against data, never prototypes', () => {
@@ -32,6 +38,20 @@ test('comparisons are forgiving about string/number mixing', () => {
   assert.equal(evaluate('flag == true', { flag: true }), true);
   assert.equal(evaluate('flag == true', { flag: 'false' }), false);
   assert.equal(evaluate('x == null', {}), true);
+  // both sides numeric text: numbers, not alphabetical ("9" < "10")
+  assert.equal(evaluate('a < b', { a: '9', b: '10' }), true);
+  assert.equal(evaluate('tier >= threshold', { tier: '10', threshold: '9' }), true);
+  assert.equal(evaluate('"10" == 10.0'), true);
+  // a number against non-numeric text or an empty answer: never equal, never ordered
+  assert.equal(evaluate('discount == "none"', { discount: 0 }), false);
+  assert.equal(evaluate('x == 0', { x: null }), false);
+  assert.equal(evaluate('x == 0', { x: '' }), false);
+  assert.equal(evaluate('a < 1', { a: 'zzz' }), false);
+  assert.equal(evaluate('a >= 0', { a: 'zzz' }), false);
+  assert.equal(evaluate('salary < 1000', { salary: null }), false);
+  assert.equal(evaluate('salary >= 1000', { salary: null }), false);
+  // text against text stays alphabetical
+  assert.equal(evaluate('a < b', { a: 'apple', b: 'banana' }), true);
 });
 
 test('logic', () => {
@@ -81,6 +101,35 @@ test('dates', () => {
   assert.match(evaluate('today()'), /^\d{4}-\d{2}-\d{2}$/);
 });
 
+test('month arithmetic clamps to the end of the target month', () => {
+  assert.equal(evaluate('add_months("2026-01-31", 1)'), '2026-02-28');
+  assert.equal(evaluate('add_months("2026-08-31", 1)'), '2026-09-30');
+  assert.equal(evaluate('add_months("2026-03-31", 6)'), '2026-09-30');
+  assert.equal(evaluate('add_months("2026-03-31", -1)'), '2026-02-28');
+  assert.equal(evaluate('add_months("2026-01-31", -1)'), '2025-12-31');
+  assert.equal(evaluate('add_months("2026-01-31", 12)'), '2027-01-31');
+  assert.equal(evaluate('add_months("2026-01-15", 1)'), '2026-02-15');
+  assert.equal(evaluate('add_years("2024-02-29", 1)'), '2025-02-28');
+  assert.equal(evaluate('add_years("2024-02-29", 4)'), '2028-02-29');
+  assert.equal(evaluate('add_years("2024-02-29", -1)'), '2023-02-28');
+});
+
+test('date parsing rejects impossible dates and reads partial dates as local dates', () => {
+  assert.equal(parseDate('2026-02-30'), null);
+  assert.equal(parseDate('2026-13-45'), null);
+  assert.equal(parseDate('2025-02-29'), null);
+  assert.equal(parseDate('1'), null);
+  assert.equal(parseDate('12'), null);
+  assert.equal(parseDate(''), null);
+  assert.equal(formatDate('2026-02-28', 'iso'), '2026-02-28');
+  assert.equal(formatDate('2026-2-8', 'iso'), '2026-02-08');
+  assert.equal(formatDate('2026-09-24T23:30:00Z', 'iso'), '2026-09-24');
+  assert.equal(evaluate('year("2026")'), 2026);                       // not December 31, 2025 in western time zones
+  assert.equal(evaluate('format_date("2026-09", "iso")'), '2026-09-01');
+  assert.equal(formatDate('September 24, 2026', 'iso'), '2026-09-24');
+  assert.equal(formatDate('9/24/2026', 'iso'), '2026-09-24');
+});
+
 test('errors are reported, never thrown as raw JS errors', () => {
   assert.equal(validate('1 +'), 'Unexpected end of expression (at position 4)');
   assert.match(validate('foo('), /Unexpected end/);
@@ -91,8 +140,25 @@ test('errors are reported, never thrown as raw JS errors', () => {
   assert.throws(() => evaluate('1 +'), { name: 'ExprError' });
 });
 
+test('long flat chains evaluate; pathological nesting is an ExprError, never a stack overflow', () => {
+  const plus = Array.from({ length: 300 }, (_, i) => `f${i}`).join(' + ');
+  const data = Object.fromEntries(Array.from({ length: 300 }, (_, i) => [`f${i}`, 1]));
+  assert.equal(validate(plus), null);
+  assert.equal(evaluate(plus, data), 300);
+  assert.equal(evaluate(Array(300).fill('x').join(' or '), { x: false }), false);
+  assert.equal(evaluate(Array(300).fill('x').join(' and '), { x: 1 }), 1);
+  assert.equal(evaluate(Array(300).fill('"a"').join(' + ')).length, 300);
+  for (const src of ['('.repeat(20000) + '1' + ')'.repeat(20000), '-'.repeat(20000) + '1', 'not '.repeat(20000) + 'a', 'a' + '.b'.repeat(20000), 'len('.repeat(5000) + '"x"' + ')'.repeat(5000)]) {
+    assert.match(validate(src), /^Expression too deep/);
+    assert.throws(() => evaluate(src), { name: 'ExprError' });
+  }
+  assert.equal(validate('('.repeat(50) + '1' + ')'.repeat(50)), null);
+});
+
 test('references and compile', () => {
   assert.deepEqual(references('a and (b or c) + sum(items.rate)').sort(), ['a', 'b', 'c', 'items']);
+  assert.deepEqual([...referenceDetails('sum(items.rate) + fee')], [['items', ['rate']], ['fee', null]]);
+  assert.deepEqual([...referenceDetails('sum(items.rate) + count(items) + join(items.name)')], [['items', null]]);   // a bare use means the whole list
   const fn = compile('base * (1 + rate)');
   assert.equal(fn({ base: 100, rate: 0.2 }), 120);
   assert.equal(fn({ base: 50, rate: 0 }), 50);

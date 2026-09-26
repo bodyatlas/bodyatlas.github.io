@@ -1,5 +1,7 @@
 /* Client intake forms: a self-contained HTML file with the questionnaire only. The client fills it in offline
    and saves an answers .json that the firm imports into a draft. Built from vendor/intake-runtime.js. */
+import { coerce } from './logic.js';
+import { blankRow } from './schema.js';
 
 export async function buildIntakeHtml({ template, settings, intro, siteUrl, version }) {
   const runtime = await (await fetch(new URL('../../vendor/intake-runtime.js', import.meta.url))).text();
@@ -33,8 +35,35 @@ export async function buildIntakeHtml({ template, settings, intro, siteUrl, vers
 export function parseAnswersFile(text) {
   let data;
   try { data = JSON.parse(text); } catch { throw new Error('This file is not valid JSON.'); }
-  if (!data || data.format !== 'clausery.answers' || typeof data.answers !== 'object') throw new Error('This is not a Clausery answers file.');
+  if (!data || data.format !== 'clausery.answers' || typeof data.answers !== 'object' || !data.answers || Array.isArray(data.answers)) throw new Error('This is not a Clausery answers file.');
   return { answers: data.answers, templateName: data.templateName || '', templateId: data.templateId || '' };
+}
+
+/** Pick the answers of a file that belong to this template, in the shape its fields expect (a hand-edited file may hold
+    numbers, arrays or objects where a text is due). Returns the cleaned answers and how many fields they cover. */
+export function sanitizeAnswers(template, raw) {
+  const has = (o, k) => !!o && typeof o === 'object' && Object.prototype.hasOwnProperty.call(o, k);
+  const scalar = (f, v) => {
+    if (v === null || v === undefined) return undefined;
+    if (typeof v === 'object') return undefined;
+    if (typeof v === 'boolean' && f.type !== 'checkbox') return undefined;
+    return coerce(f, v);
+  };
+  const out = {}; let n = 0;
+  for (const f of template.fields || []) {
+    if (f.type === 'computed' || !has(raw, f.key)) continue;
+    const v = raw[f.key];
+    if (f.type === 'repeat') {
+      if (!Array.isArray(v)) continue;
+      out[f.key] = v.filter((r) => r && typeof r === 'object' && !Array.isArray(r)).map((r) => { const row = blankRow(f); for (const c of f.children || []) { if (c.type === 'computed' || !has(r, c.key)) continue; const cv = scalar(c, r[c.key]); if (cv !== undefined) row[c.key] = cv; } return row; });
+      n++;
+    } else {
+      const sv = scalar(f, v);
+      if (sv === undefined) continue;
+      out[f.key] = sv; n++;
+    }
+  }
+  return { answers: out, count: n };
 }
 
 function escapeHtml(s) { return String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }

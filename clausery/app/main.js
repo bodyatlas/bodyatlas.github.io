@@ -4,7 +4,7 @@ import { Store, LockedError } from './lib/store.js';
 import { Plan, FEATURE_LABELS } from './lib/plan.js';
 import { verifyKey } from './lib/license.js';
 import { Router } from './ui/router.js';
-import { h, icon, toast, modal, confirmDialog, setTitle, setChildren } from './ui/dom.js';
+import { h, icon, toast, modal, confirmDialog, setTitle, setChildren, closeAllModals } from './ui/dom.js';
 import { nowISO } from './lib/schema.js';
 import * as templatesView from './ui/views/templates.js';
 import * as designerView from './ui/views/designer.js';
@@ -55,7 +55,20 @@ const ctx = {
     upgradeModal(feature);
     return false;
   },
-  lock() { if (!store.vaultMeta) return; store.setKey(null); router.resolve(); renderStatus(); },
+  /** Views add async functions here to flush pending work before the key is dropped; cleared on every navigation. */
+  lockHooks: new Set(),
+  /** Unsaved in-memory edits by record id, kept across lock/unlock so a lock never discards work. Never cleared here. */
+  pendingEdits: new Map(),
+  async lock() {
+    if (!store.vaultMeta || store.locked) return;
+    for (const hook of [...ctx.lockHooks]) { try { await hook(); } catch (e) { console.error(e); } }
+    store.setKey(null);
+    closeAllModals();
+    armIdle();
+    await router.resolve();
+    renderStatus();
+  },
+  armIdle: () => armIdle(),
   renderStatus,
 };
 
@@ -92,6 +105,7 @@ function setNav(name) {
 }
 
 async function guarded(fn, params, navName, title) {
+  ctx.lockHooks.clear();   // the previous view is unmounted now; the next one registers its own hooks
   if (store.locked) { setNav(null); setTitle('Locked'); await lockView.render(ctx, { onUnlocked: () => router.resolve() }); return; }
   setNav(navName); setTitle(title);
   setChildren(main, h('p.muted', 'Loading…'));
@@ -122,7 +136,16 @@ function armIdle() {
   if (store.vaultMeta && !store.locked && mins > 0) idleTimer = setTimeout(() => { ctx.lock(); toast('Workspace locked after inactivity.', { type: 'info' }); }, mins * 60000);
 }
 for (const ev of ['pointerdown', 'keydown', 'scroll']) window.addEventListener(ev, armIdle, { passive: true });
-store.onChange(() => armIdle());
+store.onChange((s, id, info) => { if (info && info.remote) { if (s === 'vault') onRemoteVault(); } else armIdle(); });
+
+/** Another tab enabled, changed or turned off the vault: this tab's key is stale, so drop it and re-read the metadata. */
+async function onRemoteVault() {
+  store.setKey(null);
+  store.vaultMeta = await store.getSetting('vault', null);
+  if (!store.vaultMeta && await store.hasEncryptedRecords()) store.vaultMeta = { missing: true };
+  renderStatus(); armIdle();
+  await router.resolve();
+}
 
 async function boot() {
   document.getElementById('nav-version').textContent = 'v' + APP_VERSION;
