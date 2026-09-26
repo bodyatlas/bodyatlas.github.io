@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Self-hosting · Clausery</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="Run Clausery on your own domain or intranet: it is a folder of static files with no build step and no server component.">
+<link rel="canonical" href="https://bodyatlas.github.io/clausery/docs/self-hosting.html">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Clausery">
+<meta property="og:title" content="Self-hosting · Clausery">
+<meta property="og:description" content="Run Clausery on your own domain or intranet: it is a folder of static files with no build step and no server component.">
+<meta property="og:url" content="https://bodyatlas.github.io/clausery/docs/self-hosting.html">
+<meta property="og:image" content="https://bodyatlas.github.io/clausery/assets/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="theme-color" content="#1b2a41">
+<meta name="referrer" content="strict-origin-when-cross-origin">
+<link rel="icon" href="../assets/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="../assets/icon-192.png">
+<link rel="manifest" href="../app/manifest.webmanifest">
+<link rel="stylesheet" href="../site.css">
+<script src="../app/theme.js"></script>
+<script src="../site.js" defer></script>
+
+</head>
+<body>
+<a class="sr-only" href="#main">Skip to content</a>
+<header class="site-header">
+  <div class="wrap">
+    <a class="brand" href="../"><img src="../assets/icon.svg" alt="" width="30" height="30"> Clausery</a>
+    <button class="menu-btn" type="button" aria-expanded="false" aria-controls="site-nav">Menu</button>
+    <nav class="site-nav" id="site-nav" aria-label="Site">
+      <a href="../#features">Features</a>
+      <a href="../pricing/">Pricing</a>
+      <a href="../docs/" aria-current="page">Docs</a>
+      <a href="../docs/security.html">Security</a>
+      <a class="btn btn-primary" href="../app/">Open the app</a>
+    </nav>
+  </div>
+</header>
+<main id="main" tabindex="-1">
+<div class="wrap docs"><nav class="docs-nav" aria-label="Documentation"><h4>Start here</h4><a href="../docs/">Getting started</a><a href="../docs/templates.html">Template syntax</a><a href="../docs/questionnaire.html">Designing the questionnaire</a><a href="../docs/logic.html">Logic & calculations</a><h4>Working with clients</h4><a href="../docs/intake.html">Client intake forms</a><a href="../docs/teams.html">Teams & template packs</a><a href="../docs/backups.html">Backups & data</a><h4>Trust</h4><a href="../docs/security.html">Security</a><a href="../docs/self-hosting.html" aria-current="page">Self-hosting</a><a href="../docs/faq.html">FAQ</a></nav><article class="docs-body">
+<h1>Self-hosting</h1>
+<p class="lead">Clausery is a folder of static files. Any web server, object-storage bucket or intranet file share that serves HTTPS can host it.</p>
+<h2>Deploy</h2>
+<ol>
+  <li>Get the release folder (the <code>clausery/</code> directory of the repository, or a release archive).</li>
+  <li>Upload it to your host so that <code>index.html</code> is served at the root of the path you choose, for example <code>https://draft.yourfirm.com/</code> or <code>https://intranet/tools/clausery/</code>. All links are relative, so any base path works. Configure your server to answer unknown URLs with <code>404.html</code> (GitHub Pages does this automatically for the file at the site root).</li>
+  <li>Serve over HTTPS. Service workers and WebCrypto require a secure context (localhost is also allowed).</li>
+  <li>Set <code>SITE_URL</code> in <code>app/config.js</code> to your address (used in exported intake forms).</li>
+</ol>
+<h2>Recommended headers</h2>
+<pre tabindex="0"><code>Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'none'; frame-ancestors 'none'
+X-Content-Type-Options: nosniff
+Referrer-Policy: no-referrer
+Permissions-Policy: camera=(), microphone=(), geolocation=()
+Cache-Control: no-cache   (for HTML; long max-age for vendor/ and assets/)</code></pre>
+<h2>Licensing your deployment</h2>
+<p>To issue your own license keys (Enterprise), generate a key pair with <code>npm run license -- keygen</code>, put the public key in <code>app/config.js</code> and keep the private key offline. Issue keys with <code>npm run license -- issue</code>. The app then accepts only keys signed by you.</p>
+<h2>Updating</h2>
+<p>Replace the folder with the new version. The service worker version changes with each release and users are prompted to reload. User data is in their browsers, not in the folder, so updates never touch it.</p>
+<h2>GitHub Pages</h2>
+<p>The public instance runs on GitHub Pages straight from the repository, with a CI workflow that lints, unit-tests and end-to-end tests every change. Forking the repository and enabling Pages gives you an identical setup in minutes.</p></article></div></main>
+<footer class="site-footer">
+  <div class="wrap">
+    <div>
+      <h4>Clausery</h4>
+      <p>Document automation that never leaves your browser. Turn your own Word templates into guided questionnaires and generate finished documents, offline, with no account.</p>
+    </div>
+    <div>
+      <h4>Product</h4>
+      <a href="../app/">Open the app</a>
+      <a href="../pricing/">Pricing</a>
+      <a href="../changelog.html">Changelog</a>
+      <a href="../docs/self-hosting.html">Self-hosting</a>
+    </div>
+    <div>
+      <h4>Docs</h4>
+      <a href="../docs/">Getting started</a>
+      <a href="../docs/templates.html">Template syntax</a>
+      <a href="../docs/logic.html">Logic &amp; calculations</a>
+      <a href="../docs/intake.html">Client intake</a>
+      <a href="../docs/security.html">Security</a>
+    </div>
+    <div>
+      <h4>Legal</h4>
+      <a href="../legal/privacy.html">Privacy</a>
+      <a href="../legal/terms.html">Terms</a>
+      <a href="../legal/dpa.html">Data processing</a>
+      <a href="mailto:hello@clausery.app">Contact</a>
+    </div>
+    <div class="legal">© 2026 Clausery. Clausery is software, not legal advice; documents you generate are your responsibility. Not affiliated with Microsoft; Word is a trademark of Microsoft Corporation.</div>
+  </div>
+</footer>
+</body>
+</html>

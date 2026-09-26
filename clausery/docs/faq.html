@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>FAQ · Clausery</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="Frequently asked questions about Clausery: compatibility, formatting, limits, browsers, offline use and licensing.">
+<link rel="canonical" href="https://bodyatlas.github.io/clausery/docs/faq.html">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Clausery">
+<meta property="og:title" content="FAQ · Clausery">
+<meta property="og:description" content="Frequently asked questions about Clausery: compatibility, formatting, limits, browsers, offline use and licensing.">
+<meta property="og:url" content="https://bodyatlas.github.io/clausery/docs/faq.html">
+<meta property="og:image" content="https://bodyatlas.github.io/clausery/assets/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="theme-color" content="#1b2a41">
+<meta name="referrer" content="strict-origin-when-cross-origin">
+<link rel="icon" href="../assets/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="../assets/icon-192.png">
+<link rel="manifest" href="../app/manifest.webmanifest">
+<link rel="stylesheet" href="../site.css">
+<script src="../app/theme.js"></script>
+<script src="../site.js" defer></script>
+
+</head>
+<body>
+<a class="sr-only" href="#main">Skip to content</a>
+<header class="site-header">
+  <div class="wrap">
+    <a class="brand" href="../"><img src="../assets/icon.svg" alt="" width="30" height="30"> Clausery</a>
+    <button class="menu-btn" type="button" aria-expanded="false" aria-controls="site-nav">Menu</button>
+    <nav class="site-nav" id="site-nav" aria-label="Site">
+      <a href="../#features">Features</a>
+      <a href="../pricing/">Pricing</a>
+      <a href="../docs/" aria-current="page">Docs</a>
+      <a href="../docs/security.html">Security</a>
+      <a class="btn btn-primary" href="../app/">Open the app</a>
+    </nav>
+  </div>
+</header>
+<main id="main" tabindex="-1">
+<div class="wrap docs"><nav class="docs-nav" aria-label="Documentation"><h4>Start here</h4><a href="../docs/">Getting started</a><a href="../docs/templates.html">Template syntax</a><a href="../docs/questionnaire.html">Designing the questionnaire</a><a href="../docs/logic.html">Logic & calculations</a><h4>Working with clients</h4><a href="../docs/intake.html">Client intake forms</a><a href="../docs/teams.html">Teams & template packs</a><a href="../docs/backups.html">Backups & data</a><h4>Trust</h4><a href="../docs/security.html">Security</a><a href="../docs/self-hosting.html">Self-hosting</a><a href="../docs/faq.html" aria-current="page">FAQ</a></nav><article class="docs-body">
+<h1>Frequently asked questions</h1>
+<h2>Which browsers are supported?</h2>
+<p>Current versions of Chrome, Edge, Firefox and Safari on desktop and mobile. License keys are verified with WebCrypto Ed25519 (Chrome/Edge 137+, Firefox 129+, Safari 17+). The encrypted workspace uses PBKDF2-SHA256 and AES-256-GCM, available in all current browsers.</p>
+<h2>Does it work with Google Docs or LibreOffice?</h2>
+<p>Yes, as long as you export or save as .docx. Tags are plain text, so any editor can write them.</p>
+<h2>My formatting looks different in the preview.</h2>
+<p>The on-screen preview is an approximation rendered in the browser. The downloaded .docx is assembled from your original file and opens in Word with your exact formatting. Use <em>Print / Save as PDF</em> for a quick PDF, or open the .docx in Word for a print-perfect one.</p>
+<h2>Is there a limit on template size or number of drafts?</h2>
+<p>No fixed limit. Browsers typically allow hundreds of megabytes of local storage; a template is usually well under a megabyte and a draft a few kilobytes.</p>
+<h2>Can several people work on one draft?</h2>
+<p>Not at the same time; there is no server to coordinate. Hand over a draft by exporting and importing its answers file.</p>
+<h2>Can I use it on my phone?</h2>
+<p>Yes. The app is responsive and installable. Drafting long documents is more comfortable on a larger screen.</p>
+<h2>What if Clausery disappears?</h2>
+<p>Your copy keeps working: it is cached in your browser and can be self-hosted from the repository. Your templates are your .docx files; your data exports are plain JSON.</p>
+<h2>How do I get a license key?</h2>
+<p>See <a href="../pricing/">Pricing</a>. Keys are delivered by email and entered once per device.</p></article></div></main>
+<footer class="site-footer">
+  <div class="wrap">
+    <div>
+      <h4>Clausery</h4>
+      <p>Document automation that never leaves your browser. Turn your own Word templates into guided questionnaires and generate finished documents, offline, with no account.</p>
+    </div>
+    <div>
+      <h4>Product</h4>
+      <a href="../app/">Open the app</a>
+      <a href="../pricing/">Pricing</a>
+      <a href="../changelog.html">Changelog</a>
+      <a href="../docs/self-hosting.html">Self-hosting</a>
+    </div>
+    <div>
+      <h4>Docs</h4>
+      <a href="../docs/">Getting started</a>
+      <a href="../docs/templates.html">Template syntax</a>
+      <a href="../docs/logic.html">Logic &amp; calculations</a>
+      <a href="../docs/intake.html">Client intake</a>
+      <a href="../docs/security.html">Security</a>
+    </div>
+    <div>
+      <h4>Legal</h4>
+      <a href="../legal/privacy.html">Privacy</a>
+      <a href="../legal/terms.html">Terms</a>
+      <a href="../legal/dpa.html">Data processing</a>
+      <a href="mailto:hello@clausery.app">Contact</a>
+    </div>
+    <div class="legal">© 2026 Clausery. Clausery is software, not legal advice; documents you generate are your responsibility. Not affiliated with Microsoft; Word is a trademark of Microsoft Corporation.</div>
+  </div>
+</footer>
+</body>
+</html>

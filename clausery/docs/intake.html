@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Client intake forms · Clausery</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="Collect answers from clients without a portal: export a self-contained HTML questionnaire, receive an answers file, import it into a draft.">
+<link rel="canonical" href="https://bodyatlas.github.io/clausery/docs/intake.html">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Clausery">
+<meta property="og:title" content="Client intake forms · Clausery">
+<meta property="og:description" content="Collect answers from clients without a portal: export a self-contained HTML questionnaire, receive an answers file, import it into a draft.">
+<meta property="og:url" content="https://bodyatlas.github.io/clausery/docs/intake.html">
+<meta property="og:image" content="https://bodyatlas.github.io/clausery/assets/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="theme-color" content="#1b2a41">
+<meta name="referrer" content="strict-origin-when-cross-origin">
+<link rel="icon" href="../assets/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="../assets/icon-192.png">
+<link rel="manifest" href="../app/manifest.webmanifest">
+<link rel="stylesheet" href="../site.css">
+<script src="../app/theme.js"></script>
+<script src="../site.js" defer></script>
+
+</head>
+<body>
+<a class="sr-only" href="#main">Skip to content</a>
+<header class="site-header">
+  <div class="wrap">
+    <a class="brand" href="../"><img src="../assets/icon.svg" alt="" width="30" height="30"> Clausery</a>
+    <button class="menu-btn" type="button" aria-expanded="false" aria-controls="site-nav">Menu</button>
+    <nav class="site-nav" id="site-nav" aria-label="Site">
+      <a href="../#features">Features</a>
+      <a href="../pricing/">Pricing</a>
+      <a href="../docs/" aria-current="page">Docs</a>
+      <a href="../docs/security.html">Security</a>
+      <a class="btn btn-primary" href="../app/">Open the app</a>
+    </nav>
+  </div>
+</header>
+<main id="main" tabindex="-1">
+<div class="wrap docs"><nav class="docs-nav" aria-label="Documentation"><h4>Start here</h4><a href="../docs/">Getting started</a><a href="../docs/templates.html">Template syntax</a><a href="../docs/questionnaire.html">Designing the questionnaire</a><a href="../docs/logic.html">Logic & calculations</a><h4>Working with clients</h4><a href="../docs/intake.html" aria-current="page">Client intake forms</a><a href="../docs/teams.html">Teams & template packs</a><a href="../docs/backups.html">Backups & data</a><h4>Trust</h4><a href="../docs/security.html">Security</a><a href="../docs/self-hosting.html">Self-hosting</a><a href="../docs/faq.html">FAQ</a></nav><article class="docs-body">
+<h1>Client intake forms</h1>
+<p class="lead">Clients answer the questionnaire on their own computer, offline, and send you a small answers file. No portal, no accounts, and their answers never touch a server.</p>
+<h2>How it works</h2>
+<ol>
+  <li>Open any draft of the template and, on the review step, choose <strong>Create client intake form</strong> (Pro). Add a short message. Download the form: one .html file containing the questionnaire and nothing else (no document, no answers).</li>
+  <li>Send the file to the client by whatever channel you already trust (email, secure file transfer). They double-click it. It opens in their browser from their disk; it needs no connection.</li>
+  <li>They answer the questions, can save progress to continue later, and finally <strong>Save answers</strong>, which downloads <code>&lt;template&gt;-answers.json</code>. They send that file back.</li>
+  <li>In the draft, choose <strong>Import answers</strong> and select the file. The answers are filled in; review and generate as usual.</li>
+</ol>
+<h2>What the client sees</h2>
+<p>A clean form with your firm name, your message, the sections and questions exactly as in the app, the same validation, and two buttons: save progress and save answers. It works in any current browser on Windows, macOS, Linux, iOS and Android (on phones the file is opened from the downloads folder).</p>
+<h2>Security notes</h2>
+<ul>
+  <li>The form contains the questionnaire structure (labels, help text, options), not the Word template and not previous answers.</li>
+  <li>The answers file is plain JSON. Treat it like any client document: if you would encrypt an email attachment, encrypt this one too.</li>
+  <li>The form's Content Security Policy blocks all network access, even if it were opened from a web server.</li>
+</ul>
+<h2>Hosting the form on your site</h2>
+<p>Because the form is a single static file, you can also put it on your website or client extranet. Clients still answer locally and send back the file; nothing is posted to the server hosting the page.</p></article></div></main>
+<footer class="site-footer">
+  <div class="wrap">
+    <div>
+      <h4>Clausery</h4>
+      <p>Document automation that never leaves your browser. Turn your own Word templates into guided questionnaires and generate finished documents, offline, with no account.</p>
+    </div>
+    <div>
+      <h4>Product</h4>
+      <a href="../app/">Open the app</a>
+      <a href="../pricing/">Pricing</a>
+      <a href="../changelog.html">Changelog</a>
+      <a href="../docs/self-hosting.html">Self-hosting</a>
+    </div>
+    <div>
+      <h4>Docs</h4>
+      <a href="../docs/">Getting started</a>
+      <a href="../docs/templates.html">Template syntax</a>
+      <a href="../docs/logic.html">Logic &amp; calculations</a>
+      <a href="../docs/intake.html">Client intake</a>
+      <a href="../docs/security.html">Security</a>
+    </div>
+    <div>
+      <h4>Legal</h4>
+      <a href="../legal/privacy.html">Privacy</a>
+      <a href="../legal/terms.html">Terms</a>
+      <a href="../legal/dpa.html">Data processing</a>
+      <a href="mailto:hello@clausery.app">Contact</a>
+    </div>
+    <div class="legal">© 2026 Clausery. Clausery is software, not legal advice; documents you generate are your responsibility. Not affiliated with Microsoft; Word is a trademark of Microsoft Corporation.</div>
+  </div>
+</footer>
+</body>
+</html>

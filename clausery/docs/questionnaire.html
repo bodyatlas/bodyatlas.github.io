@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Designing the questionnaire · Clausery</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="How to shape the questions Clausery generates from a template: types, sections, help text, defaults, show-when rules and repeating groups.">
+<link rel="canonical" href="https://bodyatlas.github.io/clausery/docs/questionnaire.html">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Clausery">
+<meta property="og:title" content="Designing the questionnaire · Clausery">
+<meta property="og:description" content="How to shape the questions Clausery generates from a template: types, sections, help text, defaults, show-when rules and repeating groups.">
+<meta property="og:url" content="https://bodyatlas.github.io/clausery/docs/questionnaire.html">
+<meta property="og:image" content="https://bodyatlas.github.io/clausery/assets/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="theme-color" content="#1b2a41">
+<meta name="referrer" content="strict-origin-when-cross-origin">
+<link rel="icon" href="../assets/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="../assets/icon-192.png">
+<link rel="manifest" href="../app/manifest.webmanifest">
+<link rel="stylesheet" href="../site.css">
+<script src="../app/theme.js"></script>
+<script src="../site.js" defer></script>
+
+</head>
+<body>
+<a class="sr-only" href="#main">Skip to content</a>
+<header class="site-header">
+  <div class="wrap">
+    <a class="brand" href="../"><img src="../assets/icon.svg" alt="" width="30" height="30"> Clausery</a>
+    <button class="menu-btn" type="button" aria-expanded="false" aria-controls="site-nav">Menu</button>
+    <nav class="site-nav" id="site-nav" aria-label="Site">
+      <a href="../#features">Features</a>
+      <a href="../pricing/">Pricing</a>
+      <a href="../docs/" aria-current="page">Docs</a>
+      <a href="../docs/security.html">Security</a>
+      <a class="btn btn-primary" href="../app/">Open the app</a>
+    </nav>
+  </div>
+</header>
+<main id="main" tabindex="-1">
+<div class="wrap docs"><nav class="docs-nav" aria-label="Documentation"><h4>Start here</h4><a href="../docs/">Getting started</a><a href="../docs/templates.html">Template syntax</a><a href="../docs/questionnaire.html" aria-current="page">Designing the questionnaire</a><a href="../docs/logic.html">Logic & calculations</a><h4>Working with clients</h4><a href="../docs/intake.html">Client intake forms</a><a href="../docs/teams.html">Teams & template packs</a><a href="../docs/backups.html">Backups & data</a><h4>Trust</h4><a href="../docs/security.html">Security</a><a href="../docs/self-hosting.html">Self-hosting</a><a href="../docs/faq.html">FAQ</a></nav><article class="docs-body">
+<h1>Designing the questionnaire</h1>
+<p class="lead">The designer turns the automatic first draft into a form your colleagues or clients can answer without reading the template.</p>
+<h2>Questions</h2>
+<p>Select a question in the list to edit it. Every question has a label, an optional help text, a type, and a <em>Show only when</em> rule.</p>
+<table><thead><tr><th>Type</th><th>Answer</th><th>In the document</th></tr></thead><tbody>
+<tr><td>Short text, Long text</td><td>Text</td><td>As typed; long text keeps line breaks</td></tr>
+<tr><td>Number</td><td>A number, with optional min/max and decimals</td><td>Formatted for the workspace locale (1,250.5)</td></tr>
+<tr><td>Money</td><td>An amount in a currency</td><td>Currency-formatted ($1,250.50, €1.250,50)</td></tr>
+<tr><td>Date</td><td>A date picker</td><td>Long (September 24, 2026), medium, short, full or ISO</td></tr>
+<tr><td>Dropdown, Choice</td><td>One of a list of options; store a value different from the label with <code>value | Label</code></td><td>The label</td></tr>
+<tr><td>Yes / no</td><td>A checkbox</td><td>Controls a conditional section</td></tr>
+<tr><td>Email, Phone</td><td>Validated text</td><td>As typed</td></tr>
+<tr><td>Computed</td><td>Not asked; calculated from other answers</td><td>Text, number, money, date or yes/no</td></tr>
+<tr><td>Repeating group</td><td>A list of items, each with its own fields</td><td>Repeats the tagged content</td></tr>
+</tbody></table>
+<h2>Sections</h2>
+<p>Sections become the steps of the interview. Add, rename and reorder them, and move questions between them with the <em>Section</em> setting. A short introduction per section helps the person answering understand what is being asked and why.</p>
+<h2>Show only when</h2>
+<p>Any question or group can be hidden until a condition holds. The rule is an expression over other answers, for example <code>has_retainer</code>, <code>fee_type == "flat"</code> or <code>count(attorneys) &gt; 1</code>. Hidden questions are not validated and render blank in the document. See <a href="../docs/logic.html">Logic &amp; calculations</a>.</p>
+<h2>Required answers and validation</h2>
+<p>Required questions must be answered before the section is marked complete. The interview still lets people skip ahead and generate with gaps (blank in the output), because a half-finished draft is often more useful than a blocked one. The review step lists everything missing.</p>
+<h2>Repeating groups</h2>
+<p>Set the item name (Attorney, Party, Item), minimum and maximum counts, and the fields for each item. Fields inside a group can have their own <em>Show only when</em> rules that refer to the item's other fields, and to top-level answers.</p>
+<h2>Changing the Word document</h2>
+<p>Use <em>Replace document</em> in the designer to upload a new version of the .docx. New tags are added as questions, and questions whose tag no longer exists are flagged so you can remove or keep them. Existing labels, help and rules are preserved.</p>
+<h2>Preview</h2>
+<p>The <em>Preview questionnaire</em> tab shows the interview as others will see it, and <em>Document text</em> shows the plain text of the template with its tags for reference.</p></article></div></main>
+<footer class="site-footer">
+  <div class="wrap">
+    <div>
+      <h4>Clausery</h4>
+      <p>Document automation that never leaves your browser. Turn your own Word templates into guided questionnaires and generate finished documents, offline, with no account.</p>
+    </div>
+    <div>
+      <h4>Product</h4>
+      <a href="../app/">Open the app</a>
+      <a href="../pricing/">Pricing</a>
+      <a href="../changelog.html">Changelog</a>
+      <a href="../docs/self-hosting.html">Self-hosting</a>
+    </div>
+    <div>
+      <h4>Docs</h4>
+      <a href="../docs/">Getting started</a>
+      <a href="../docs/templates.html">Template syntax</a>
+      <a href="../docs/logic.html">Logic &amp; calculations</a>
+      <a href="../docs/intake.html">Client intake</a>
+      <a href="../docs/security.html">Security</a>
+    </div>
+    <div>
+      <h4>Legal</h4>
+      <a href="../legal/privacy.html">Privacy</a>
+      <a href="../legal/terms.html">Terms</a>
+      <a href="../legal/dpa.html">Data processing</a>
+      <a href="mailto:hello@clausery.app">Contact</a>
+    </div>
+    <div class="legal">© 2026 Clausery. Clausery is software, not legal advice; documents you generate are your responsibility. Not affiliated with Microsoft; Word is a trademark of Microsoft Corporation.</div>
+  </div>
+</footer>
+</body>
+</html>
