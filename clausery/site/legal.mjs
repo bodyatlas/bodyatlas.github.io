@@ -4,7 +4,7 @@ page('legal/privacy.html', 'Privacy policy', 'Clausery privacy policy: the app p
 <h1>Privacy policy</h1>
 <p class="muted">Effective 24 September 2026</p>
 <h2>Summary</h2>
-<p>Clausery is designed so that we cannot see your data. The application runs entirely in your web browser, stores its data only on your device, and makes no network requests after it has loaded. We do not operate accounts, analytics, or servers that receive your templates, answers or documents.</p>
+<p>Clausery is designed so that we cannot see your data. The application runs entirely in your web browser, stores its data only on your device, and only ever requests its own files from the site that serves it; it never sends your templates, answers or documents anywhere. We do not operate accounts, analytics, or servers that receive your templates, answers or documents.</p>
 <h2>What the app processes</h2>
 <p>Templates (.docx files), the answers you enter, generated documents, settings and license keys are processed in your browser and stored in its local database. This data is under your control and is never transmitted to us or to any third party by the app.</p>
 <h2>What the website host receives</h2>

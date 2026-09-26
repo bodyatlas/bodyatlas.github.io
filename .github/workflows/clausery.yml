@@ -3,9 +3,9 @@ name: Clausery CI
 on:
   push:
     branches: [main]
-    paths: ['clausery/**', '.github/workflows/clausery.yml']
+    paths: ['clausery/**', 'robots.txt', '404.html', '.github/workflows/clausery.yml']
   pull_request:
-    paths: ['clausery/**', '.github/workflows/clausery.yml']
+    paths: ['clausery/**', 'robots.txt', '404.html', '.github/workflows/clausery.yml']
   workflow_dispatch:
 
 permissions:
@@ -34,11 +34,15 @@ jobs:
       - run: npm run lint
       - run: npm test
       - run: npm run check:html
-      - name: Vendored bundles and generated pages are up to date
+      - name: Generated files are up to date
         run: |
-          npm run build:vendor
-          npm run build:site
-          git diff --exit-code -- vendor/ app/lib/versions.js '*.html' || (echo "Run npm run build and commit the result." && exit 1)
+          npm run build
+          git add -A -N .. >/dev/null
+          if ! git diff --quiet -- . ../robots.txt ../404.html; then
+            git status --short -- . ../robots.txt ../404.html
+            echo "Generated files are stale or missing. Run npm run build and commit the result."
+            exit 1
+          fi
 
   e2e:
     name: End-to-end (Chromium)

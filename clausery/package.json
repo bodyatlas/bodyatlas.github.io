@@ -8,7 +8,7 @@
     "build:vendor": "node tools/build-vendor.mjs",
     "build:samples": "node tools/make-samples.mjs",
     "build:sitemap": "node tools/make-sitemap.mjs",
-    "build": "npm run build:vendor && npm run build:samples && npm run build:site && npm run build:sitemap",
+    "build": "npm run build:vendor && npm run build:samples && npm run build:site && npm run build:sitemap && npm run release",
     "lint": "eslint .",
     "test": "node --test 'tests/unit/*.test.mjs'",
     "test:e2e": "playwright test",
@@ -18,7 +18,8 @@
     "license": "node tools/license.mjs",
     "verify": "npm run lint && npm run check:html && npm test",
     "build:site": "node tools/build-site.mjs",
-    "smoke": "node tools/smoke.mjs"
+    "smoke": "node tools/smoke.mjs",
+    "release": "node tools/release.mjs"
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.10.2",

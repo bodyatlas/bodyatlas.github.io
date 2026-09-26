@@ -1,10 +1,19 @@
 // Headless smoke test of the app: boot, load a sample, open the designer, create a draft, fill, generate.
 import { chromium } from '@playwright/test';
 import { spawn } from 'node:child_process';
+/** Start tools/serve.mjs on a port and resolve once it is listening (no fixed sleeps). */
+function startServer(port) {
+  return new Promise((resolve, reject) => {
+    const child = spawn('node', ['tools/serve.mjs', String(port)], { cwd: process.cwd(), stdio: ['ignore', 'pipe', 'inherit'] });
+    const timer = setTimeout(() => reject(new Error('server did not start')), 15000);
+    child.stdout.on('data', (d) => { if (String(d).includes('serving')) { clearTimeout(timer); resolve(child); } });
+    child.on('exit', (code) => { clearTimeout(timer); reject(new Error('server exited with ' + code)); });
+  });
+}
+
 import { readFileSync } from 'node:fs';
 
-const server = spawn('node', ['tools/serve.mjs', '4199'], { cwd: process.cwd(), stdio: 'pipe' });
-await new Promise((r) => setTimeout(r, 800));
+const server = await startServer(4199);
 const browser = await chromium.launch();
 const page = await browser.newPage({ acceptDownloads: true });
 const errors = [];

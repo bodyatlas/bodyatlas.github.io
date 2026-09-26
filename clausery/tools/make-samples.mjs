@@ -2,6 +2,22 @@
 // Each template uses plain docxtemplater tags: {field}, {#section}...{/section}, {^section}...{/section}, {#list}{item}{/list}.
 import { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType } from 'docx';
 import { writeFileSync, mkdirSync } from 'node:fs';
+import JSZip from 'jszip';
+
+// Fixed timestamps make the output byte-for-byte reproducible, so rebuilding never dirties the tracked samples.
+const FIXED_DATE = new Date('2026-09-24T00:00:00Z');
+async function deterministic(buffer) {
+  const src = await JSZip.loadAsync(buffer);
+  const out = new JSZip();
+  for (const name of Object.keys(src.files).sort()) {
+    const entry = src.files[name];
+    if (entry.dir) continue;
+    let data = await entry.async('nodebuffer');
+    if (name === 'docProps/core.xml') data = Buffer.from(data.toString('utf8').replace(/(<dcterms:(?:created|modified)[^>]*>)[^<]*(<\/dcterms:)/g, '$1' + FIXED_DATE.toISOString().replace(/\.\d+Z$/, 'Z') + '$2'));
+    out.file(name, data, { date: FIXED_DATE, createFolders: false });
+  }
+  return out.generateAsync({ type: 'nodebuffer', compression: 'DEFLATE', platform: 'UNIX' });
+}
 
 const P = (text, opts = {}) => new Paragraph({ children: [new TextRun({ text, ...opts })], spacing: { after: 160 } });
 const H = (text) => new Paragraph({ text, heading: HeadingLevel.HEADING_1, spacing: { before: 240, after: 160 } });
@@ -98,6 +114,6 @@ const offer = doc([
 
 mkdirSync('samples', { recursive: true });
 for (const [file, d] of [['mutual-nda.docx', nda], ['engagement-letter.docx', engagement], ['offer-letter.docx', offer]]) {
-  writeFileSync(`samples/${file}`, await Packer.toBuffer(d));
+  writeFileSync(`samples/${file}`, await deterministic(await Packer.toBuffer(d)));
   console.log('wrote samples/' + file);
 }

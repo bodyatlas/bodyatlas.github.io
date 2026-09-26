@@ -47,11 +47,12 @@ clausery/
 ```bash
 cd clausery
 npm ci
-npm run build        # vendor bundle, samples, site pages, sitemap
+npm run build        # vendor bundle, samples, site pages, sitemap, release stamp
 npm run serve        # http://127.0.0.1:4173/clausery/
 npm run verify       # lint + HTML checks + unit tests
 npm run test:e2e     # Playwright (needs Chromium: npx playwright install chromium)
 npm run screenshots  # regenerate marketing images and icons
+npm run release      # after bumping "version" in package.json: stamps sw.js and app/config.js, regenerates the precache list
 ```
 
 Everything committed is what gets deployed: GitHub Pages serves the folder as-is. CI (`.github/workflows/clausery.yml`) lints, tests, checks HTML/links, verifies that generated files are up to date, and runs the end-to-end suite.

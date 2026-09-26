@@ -89,13 +89,13 @@ export const pages = [{
 <section class="section" id="compare">
   <div class="wrap" style="max-width:52rem">
     <h2>What the alternatives cost</h2>
-    <p class="muted">Published entry prices as of 2026, for orientation. They are good products for firms that are comfortable with cloud processing of client data.</p>
+    <p class="muted">Prices as of 2026, for orientation. They are good products for firms that are comfortable with cloud processing of client data.</p>
     <div class="table-wrap">
     <table class="compare">
-      <thead><tr><th scope="col">Product</th><th scope="col">Published price</th><th scope="col">Where documents are processed</th></tr></thead>
+      <thead><tr><th scope="col">Product</th><th scope="col">Price</th><th scope="col">Where documents are processed</th></tr></thead>
       <tbody>
-        <tr><td>Gavel (document automation)</td><td>From about $83 to $99 per month (Lite); Pro about $417 per month</td><td>Vendor cloud</td></tr>
-        <tr><td>Clio Draft</td><td>$49 to $149 per user per month</td><td>Vendor cloud</td></tr>
+        <tr><td>Gavel (document automation)</td><td>Lite from about $83 to $99 per month; higher tiers about $250 to $417 per month (vendor pricing page)</td><td>Vendor cloud</td></tr>
+        <tr><td>Clio Draft</td><td>Quote-based; third-party 2026 guides report roughly $49 to $149 per user per month</td><td>Vendor cloud</td></tr>
         <tr><td>Proposal and contract suites (PandaDoc, Better Proposals)</td><td>$13 to $49 per user per month</td><td>Vendor cloud</td></tr>
         <tr><td><strong>Clausery Pro</strong></td><td><strong>$19 per user per month</strong></td><td><strong>Your browser</strong></td></tr>
       </tbody>
@@ -116,12 +116,5 @@ export const pages = [{
     </div>
   </div>
 </section>
-<script type="module">
-  import { CHECKOUT_URLS, CONTACT_EMAIL } from '${rel}app/config.js';
-  for (const a of document.querySelectorAll('[data-checkout]')) {
-    const url = CHECKOUT_URLS[a.dataset.checkout];
-    if (url) { a.href = url; a.rel = 'noopener'; }
-    else { a.href = 'mailto:' + CONTACT_EMAIL + '?subject=' + encodeURIComponent('Clausery ' + a.dataset.checkout + ' license'); a.textContent = 'Request a ' + a.dataset.checkout + ' key'; }
-  }
-</script>`,
+<script type="module" src="${rel}pricing/checkout.js"></script>`,
 }];

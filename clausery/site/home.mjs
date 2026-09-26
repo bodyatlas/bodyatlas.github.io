@@ -18,7 +18,7 @@ export const pages = [{
       </div>
       <div class="proof">
         <span>${ico(I.check)} No sign-up</span>
-        <span>${ico(I.check)} Zero network requests after load</span>
+        <span>${ico(I.check)} No third-party requests, nothing sent anywhere</span>
         <span>${ico(I.check)} Your templates, your formatting</span>
       </div>
     </div>
@@ -91,7 +91,7 @@ export const pages = [{
     <div class="grid grid-2">
       <div>
         <h2>Verify it yourself</h2>
-        <p>Open your browser's Network panel while you draft. After the page loads there are no requests: not to us, not to analytics, not to anyone. The source is readable, the document engine is open-source, and you can host a copy on your own domain or intranet.</p>
+        <p>Open your browser's Network panel while you draft. The only requests are for Clausery's own files from the site that serves it (the app, the sample templates, the intake-form runtime), and once installed they come from the offline cache. Nothing you type or upload is ever sent: not to us, not to analytics, not to anyone. The source is readable, the document engine is open-source, and you can host a copy on your own domain or intranet.</p>
         <p><a href="${rel}docs/security.html">Read the security overview →</a></p>
       </div>
       <blockquote class="quote">"Seventy percent of respondents prioritized a data privacy policy when vetting vendors." <cite>Legal professionals surveyed on 2026 technology adoption; the cheapest privacy policy to audit is the one that says the data never left your machine.</cite></blockquote>

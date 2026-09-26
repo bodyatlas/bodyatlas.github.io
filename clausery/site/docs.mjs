@@ -17,7 +17,7 @@ and {party_b_name} ("{party_b_short}").</code></pre>
 <p>The template opens in the designer. Rename questions, add help text, reorder, group into sections, and adjust anything the automatic guesses got wrong. Save.</p>
 <h2>3. Draft a document</h2>
 <p>Click <strong>New draft</strong>. Work through the sections; answers save as you type. On the <strong>Review &amp; generate</strong> step, preview the result, download the .docx, or print to PDF. The draft stays in your list and can be regenerated after edits.</p>
-<div class="note">Nothing in steps 1–3 leaves your computer. The app, once loaded, makes no network requests. You can confirm this in your browser's developer tools (Network tab).</div>
+<div class="note">Nothing in steps 1–3 leaves your computer. The app only ever requests its own files from the site that serves it and never sends your data anywhere. You can confirm this in your browser's developer tools (Network tab).</div>
 <h2>Where things are stored</h2>
 <p>Templates, the original .docx files and drafts are kept in your browser's local database (IndexedDB) for this site. That means:</p>
 <ul>
@@ -122,7 +122,7 @@ page('docs/logic.html', 'Logic & calculations', 'The Clausery expression languag
 <p>Answers are referred to by their tag name: <code>salary</code>, <code>has_bonus</code>, <code>start_date</code>. Inside a repeating group, the item's own fields come first, then top-level answers. Literals: numbers <code>12</code>, <code>0.2</code>; text <code>"flat"</code>; <code>true</code>, <code>false</code>, <code>null</code>; lists <code>["CA", "NY"]</code>.</p>
 <h2>Operators</h2>
 <table><thead><tr><th>Operators</th><th>Notes</th></tr></thead><tbody>
-<tr><td><code>+ - * / %</code></td><td>Arithmetic. <code>+</code> joins text when either side is text.</td></tr>
+<tr><td><code>+ - * / %</code></td><td>Arithmetic. <code>+</code> adds when both sides are numbers and joins text when either side is text; use <code>concat(a, b)</code> to be explicit.</td></tr>
 <tr><td><code>== != &lt; &lt;= &gt; &gt;=</code></td><td>Comparison. Numbers typed as text compare as numbers.</td></tr>
 <tr><td><code>and or not</code> (also <code>&amp;&amp; || !</code>)</td><td>Logic. Empty text, 0, <code>false</code>, <code>null</code> and empty lists count as false.</td></tr>
 <tr><td><code>x in ["a", "b"]</code></td><td>Membership.</td></tr>
@@ -186,7 +186,7 @@ page('docs/teams.html', 'Teams & template packs', 'Share approved templates acro
 <h1>Teams &amp; template packs</h1>
 <p class="lead">Clausery has no central server, so sharing works the way your firm already shares files.</p>
 <h2>Template packs</h2>
-<p>A pack is a JSON file holding one or more templates: the Word document, the questionnaire and its logic. Export one from a template's menu (<em>Export as template pack</em>) or several at once from Settings (a workspace backup also contains drafts; a pack does not).</p>
+<p>A pack is a JSON file holding one or more templates: the Word document, the questionnaire and its logic. Export one from a template's menu (<em>Export as template pack</em>). A workspace backup (Settings → Your data) is different: it also contains drafts, and it is restored with <em>Restore backup</em>, not <em>Import pack</em>.</p>
 <p>Put the pack on the shared drive or in your document-management system. Colleagues import it from the Templates page. Importing a pack that contains a template they already have updates it in place, so versioning is as simple as re-exporting after changes.</p>
 <div class="note">Suggested practice: keep an "approved templates" folder with the current pack, and a changelog next to it. One person owns edits; everyone else imports.</div>
 <h2>Drafts stay personal</h2>
@@ -220,7 +220,7 @@ page('docs/security.html', 'Security', 'How Clausery keeps client data on the de
   <li>The product is a set of static files (HTML, CSS, JavaScript) served from a web host. There is no backend, database, API or account system operated by us.</li>
   <li>All processing (reading .docx templates, evaluating answers, generating documents, encrypting storage) happens in the browser's JavaScript engine.</li>
   <li>Data at rest is in the browser's IndexedDB, scoped to the site origin and the browser profile.</li>
-  <li>After the initial load, the app makes no network requests. The service worker caches the app for offline use and only serves same-origin files.</li>
+  <li>The app only requests its own static files (code, sample templates, the intake-form runtime) from the site that serves it; it never uploads or posts anything, and it makes no request to any third party. The service worker caches those files for offline use and only handles same-origin requests.</li>
 </ul>
 <h2>What we can see</h2>
 <p>Nothing about your documents. The host serving the static files (GitHub Pages for the public instance) sees ordinary web-server traffic: the IP address and browser of whoever loads the app. There are no analytics, cookies, tracking pixels or third-party scripts. Fonts are system fonts.</p>
@@ -246,9 +246,9 @@ page('docs/security.html', 'Security', 'How Clausery keeps client data on the de
 </tbody></table>
 <h2>Verify it</h2>
 <ol>
-  <li>Open the app, then open the browser's developer tools → Network. Import a template, draft and generate. Observe zero requests after the initial page load (the service worker may show cache hits).</li>
+  <li>Open the app, then open the browser's developer tools → Network. Import a template, draft and generate. Every request is a GET for one of Clausery's own files on the same site (for example <code>samples/…docx</code> when you pick a sample); none carries your data, and none goes to another domain. After the app is installed these are answered by the service worker cache.</li>
   <li>Disconnect from the network. Everything continues to work.</li>
-  <li>Read the source: it is served unminified except for the bundled document library, whose exact upstream versions are listed in Settings → About.</li>
+  <li>Read the source: it is served unminified except for two built files: the bundled document library (<code>vendor/docs.js</code>, upstream versions listed in Settings → About) and the intake-form runtime (<code>vendor/intake-runtime.js</code>, built from <code>src/intake/runtime.js</code> and the app's own modules), which is what exported intake forms contain.</li>
 </ol>
 <h2>Reporting a vulnerability</h2>
 <p>Email <a href="mailto:security@clausery.app">security@clausery.app</a>. We aim to acknowledge within two business days. Please do not test against other people's deployments.</p>`),
@@ -259,7 +259,7 @@ page('docs/self-hosting.html', 'Self-hosting', 'Run Clausery on your own domain 
 <h2>Deploy</h2>
 <ol>
   <li>Get the release folder (the <code>clausery/</code> directory of the repository, or a release archive).</li>
-  <li>Upload it to your host so that <code>index.html</code> is served at the root of the path you choose, for example <code>https://draft.yourfirm.com/</code> or <code>https://intranet/tools/clausery/</code>. All links are relative, so any base path works.</li>
+  <li>Upload it to your host so that <code>index.html</code> is served at the root of the path you choose, for example <code>https://draft.yourfirm.com/</code> or <code>https://intranet/tools/clausery/</code>. All links are relative, so any base path works. Configure your server to answer unknown URLs with <code>404.html</code> (GitHub Pages does this automatically for the file at the site root).</li>
   <li>Serve over HTTPS. Service workers and WebCrypto require a secure context (localhost is also allowed).</li>
   <li>Set <code>SITE_URL</code> in <code>app/config.js</code> to your address (used in exported intake forms).</li>
 </ol>
@@ -279,7 +279,7 @@ Cache-Control: no-cache   (for HTML; long max-age for vendor/ and assets/)</code
 page('docs/faq.html', 'FAQ', 'Frequently asked questions about Clausery: compatibility, formatting, limits, browsers, offline use and licensing.', (rel) => `
 <h1>Frequently asked questions</h1>
 <h2>Which browsers are supported?</h2>
-<p>Current versions of Chrome, Edge, Firefox and Safari on desktop and mobile. The encrypted workspace and license keys use WebCrypto Ed25519, available in Chrome/Edge 137+, Firefox 129+ and Safari 17+.</p>
+<p>Current versions of Chrome, Edge, Firefox and Safari on desktop and mobile. License keys are verified with WebCrypto Ed25519 (Chrome/Edge 137+, Firefox 129+, Safari 17+). The encrypted workspace uses PBKDF2-SHA256 and AES-256-GCM, available in all current browsers.</p>
 <h2>Does it work with Google Docs or LibreOffice?</h2>
 <p>Yes, as long as you export or save as .docx. Tags are plain text, so any editor can write them.</p>
 <h2>My formatting looks different in the preview.</h2>

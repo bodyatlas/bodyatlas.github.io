@@ -26,11 +26,16 @@ test('the app has no serious accessibility violations on its main screens', asyn
   }
 });
 
-test('offline: the service worker precache list only names files that exist', async () => {
-  const { readFileSync, existsSync } = await import('node:fs');
-  const sw = readFileSync('sw.js', 'utf8');
-  const list = sw.slice(sw.indexOf('const PRECACHE = ['), sw.indexOf('].map'));
-  const files = [...list.matchAll(/'([^',]+)'/g)].map((m) => m[1]).filter((f) => f && !f.endsWith('/'));
-  const missing = files.filter((f) => !existsSync(f));
-  expect(missing).toEqual([]);
+// The service worker precache list is checked by tests/unit/release.test.mjs (completeness, existence, versions).
+
+test('mobile menu opens under a strict script policy (no inline handlers)', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 800 });
+  await page.goto('pricing/');
+  const btn = page.locator('.menu-btn');
+  await expect(page.locator('#site-nav')).toBeHidden();
+  await btn.click();
+  await expect(page.locator('#site-nav')).toBeVisible();
+  await expect(btn).toHaveAttribute('aria-expanded', 'true');
+  expect(await page.locator('[onclick]').count()).toBe(0);
+  await expect(page.locator('[data-checkout="pro"]')).toHaveText(/Request a pro key|Get Pro/);
 });

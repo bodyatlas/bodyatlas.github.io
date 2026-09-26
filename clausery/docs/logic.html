@@ -20,6 +20,7 @@
 <link rel="manifest" href="../app/manifest.webmanifest">
 <link rel="stylesheet" href="../site.css">
 <script src="../app/theme.js"></script>
+<script src="../site.js" defer></script>
 
 </head>
 <body>
@@ -27,7 +28,7 @@
 <header class="site-header">
   <div class="wrap">
     <a class="brand" href="../"><img src="../assets/icon.svg" alt="" width="30" height="30"> Clausery</a>
-    <button class="menu-btn" type="button" aria-expanded="false" aria-controls="site-nav" onclick="var n=document.getElementById('site-nav');var o=n.classList.toggle('open');this.setAttribute('aria-expanded',o)">Menu</button>
+    <button class="menu-btn" type="button" aria-expanded="false" aria-controls="site-nav">Menu</button>
     <nav class="site-nav" id="site-nav" aria-label="Site">
       <a href="../#features">Features</a>
       <a href="../pricing/">Pricing</a>
@@ -45,7 +46,7 @@
 <p>Answers are referred to by their tag name: <code>salary</code>, <code>has_bonus</code>, <code>start_date</code>. Inside a repeating group, the item's own fields come first, then top-level answers. Literals: numbers <code>12</code>, <code>0.2</code>; text <code>"flat"</code>; <code>true</code>, <code>false</code>, <code>null</code>; lists <code>["CA", "NY"]</code>.</p>
 <h2>Operators</h2>
 <table><thead><tr><th>Operators</th><th>Notes</th></tr></thead><tbody>
-<tr><td><code>+ - * / %</code></td><td>Arithmetic. <code>+</code> joins text when either side is text.</td></tr>
+<tr><td><code>+ - * / %</code></td><td>Arithmetic. <code>+</code> adds when both sides are numbers and joins text when either side is text; use <code>concat(a, b)</code> to be explicit.</td></tr>
 <tr><td><code>== != &lt; &lt;= &gt; &gt;=</code></td><td>Comparison. Numbers typed as text compare as numbers.</td></tr>
 <tr><td><code>and or not</code> (also <code>&amp;&amp; || !</code>)</td><td>Logic. Empty text, 0, <code>false</code>, <code>null</code> and empty lists count as false.</td></tr>
 <tr><td><code>x in ["a", "b"]</code></td><td>Membership.</td></tr>

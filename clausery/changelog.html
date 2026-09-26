@@ -20,6 +20,7 @@
 <link rel="manifest" href="./app/manifest.webmanifest">
 <link rel="stylesheet" href="./site.css">
 <script src="./app/theme.js"></script>
+<script src="./site.js" defer></script>
 
 </head>
 <body>
@@ -27,7 +28,7 @@
 <header class="site-header">
   <div class="wrap">
     <a class="brand" href="./"><img src="./assets/icon.svg" alt="" width="30" height="30"> Clausery</a>
-    <button class="menu-btn" type="button" aria-expanded="false" aria-controls="site-nav" onclick="var n=document.getElementById('site-nav');var o=n.classList.toggle('open');this.setAttribute('aria-expanded',o)">Menu</button>
+    <button class="menu-btn" type="button" aria-expanded="false" aria-controls="site-nav">Menu</button>
     <nav class="site-nav" id="site-nav" aria-label="Site">
       <a href="./#features">Features</a>
       <a href="./pricing/">Pricing</a>

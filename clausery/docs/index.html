@@ -20,6 +20,7 @@
 <link rel="manifest" href="../app/manifest.webmanifest">
 <link rel="stylesheet" href="../site.css">
 <script src="../app/theme.js"></script>
+<script src="../site.js" defer></script>
 
 </head>
 <body>
@@ -27,7 +28,7 @@
 <header class="site-header">
   <div class="wrap">
     <a class="brand" href="../"><img src="../assets/icon.svg" alt="" width="30" height="30"> Clausery</a>
-    <button class="menu-btn" type="button" aria-expanded="false" aria-controls="site-nav" onclick="var n=document.getElementById('site-nav');var o=n.classList.toggle('open');this.setAttribute('aria-expanded',o)">Menu</button>
+    <button class="menu-btn" type="button" aria-expanded="false" aria-controls="site-nav">Menu</button>
     <nav class="site-nav" id="site-nav" aria-label="Site">
       <a href="../#features">Features</a>
       <a href="../pricing/">Pricing</a>
@@ -53,7 +54,7 @@ and {party_b_name} ("{party_b_short}").</code></pre>
 <p>The template opens in the designer. Rename questions, add help text, reorder, group into sections, and adjust anything the automatic guesses got wrong. Save.</p>
 <h2>3. Draft a document</h2>
 <p>Click <strong>New draft</strong>. Work through the sections; answers save as you type. On the <strong>Review &amp; generate</strong> step, preview the result, download the .docx, or print to PDF. The draft stays in your list and can be regenerated after edits.</p>
-<div class="note">Nothing in steps 1–3 leaves your computer. The app, once loaded, makes no network requests. You can confirm this in your browser's developer tools (Network tab).</div>
+<div class="note">Nothing in steps 1–3 leaves your computer. The app only ever requests its own files from the site that serves it and never sends your data anywhere. You can confirm this in your browser's developer tools (Network tab).</div>
 <h2>Where things are stored</h2>
 <p>Templates, the original .docx files and drafts are kept in your browser's local database (IndexedDB) for this site. That means:</p>
 <ul>

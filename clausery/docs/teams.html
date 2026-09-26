@@ -20,6 +20,7 @@
 <link rel="manifest" href="../app/manifest.webmanifest">
 <link rel="stylesheet" href="../site.css">
 <script src="../app/theme.js"></script>
+<script src="../site.js" defer></script>
 
 </head>
 <body>
@@ -27,7 +28,7 @@
 <header class="site-header">
   <div class="wrap">
     <a class="brand" href="../"><img src="../assets/icon.svg" alt="" width="30" height="30"> Clausery</a>
-    <button class="menu-btn" type="button" aria-expanded="false" aria-controls="site-nav" onclick="var n=document.getElementById('site-nav');var o=n.classList.toggle('open');this.setAttribute('aria-expanded',o)">Menu</button>
+    <button class="menu-btn" type="button" aria-expanded="false" aria-controls="site-nav">Menu</button>
     <nav class="site-nav" id="site-nav" aria-label="Site">
       <a href="../#features">Features</a>
       <a href="../pricing/">Pricing</a>
@@ -42,7 +43,7 @@
 <h1>Teams &amp; template packs</h1>
 <p class="lead">Clausery has no central server, so sharing works the way your firm already shares files.</p>
 <h2>Template packs</h2>
-<p>A pack is a JSON file holding one or more templates: the Word document, the questionnaire and its logic. Export one from a template's menu (<em>Export as template pack</em>) or several at once from Settings (a workspace backup also contains drafts; a pack does not).</p>
+<p>A pack is a JSON file holding one or more templates: the Word document, the questionnaire and its logic. Export one from a template's menu (<em>Export as template pack</em>). A workspace backup (Settings → Your data) is different: it also contains drafts, and it is restored with <em>Restore backup</em>, not <em>Import pack</em>.</p>
 <p>Put the pack on the shared drive or in your document-management system. Colleagues import it from the Templates page. Importing a pack that contains a template they already have updates it in place, so versioning is as simple as re-exporting after changes.</p>
 <div class="note">Suggested practice: keep an "approved templates" folder with the current pack, and a changelog next to it. One person owns edits; everyone else imports.</div>
 <h2>Drafts stay personal</h2>

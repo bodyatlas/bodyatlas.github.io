@@ -88,7 +88,7 @@ export async function render(ctx) {
 
   // ---- about
   const about = section('about', 'About', null,
-    h('dl.kv', h('dt', 'Version'), h('dd', ctx.version), h('dt', 'Document engine'), h('dd', `docxtemplater ${VERSIONS.docxtemplater} · pizzip ${VERSIONS.pizzip} · docx-preview ${VERSIONS['docx-preview']}`), h('dt', 'Network use'), h('dd', 'None after the app is loaded. Check the Network tab of your browser to verify.'), h('dt', 'Links'), h('dd', h('a', { href: '../docs/', target: '_blank', rel: 'noopener' }, 'Documentation'), ' · ', h('a', { href: '../docs/security.html', target: '_blank', rel: 'noopener' }, 'Security'), ' · ', h('a', { href: '../legal/privacy.html', target: '_blank', rel: 'noopener' }, 'Privacy'), ' · ', h('a', { href: '../changelog.html', target: '_blank', rel: 'noopener' }, 'Changelog'))));
+    h('dl.kv', h('dt', 'Version'), h('dd', ctx.version), h('dt', 'Document engine'), h('dd', `docxtemplater ${VERSIONS.docxtemplater} · pizzip ${VERSIONS.pizzip} · docx-preview ${VERSIONS['docx-preview']}`), h('dt', 'Network use'), h('dd', 'Only Clausery\'s own files, from the site that serves it. Nothing you enter is ever sent anywhere; check the Network tab of your browser to verify.'), h('dt', 'Links'), h('dd', h('a', { href: '../docs/', target: '_blank', rel: 'noopener' }, 'Documentation'), ' · ', h('a', { href: '../docs/security.html', target: '_blank', rel: 'noopener' }, 'Security'), ' · ', h('a', { href: '../legal/privacy.html', target: '_blank', rel: 'noopener' }, 'Privacy'), ' · ', h('a', { href: '../changelog.html', target: '_blank', rel: 'noopener' }, 'Changelog'))));
 
   setChildren(ctx.main, h('div.narrow.stack', h('div.page-head', h('div', h('h1', 'Settings'))), profile, appearance, license, security, data, about));
 }

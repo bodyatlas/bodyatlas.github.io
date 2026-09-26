@@ -20,6 +20,7 @@
 <link rel="manifest" href="../app/manifest.webmanifest">
 <link rel="stylesheet" href="../site.css">
 <script src="../app/theme.js"></script>
+<script src="../site.js" defer></script>
 
 </head>
 <body>
@@ -27,7 +28,7 @@
 <header class="site-header">
   <div class="wrap">
     <a class="brand" href="../"><img src="../assets/icon.svg" alt="" width="30" height="30"> Clausery</a>
-    <button class="menu-btn" type="button" aria-expanded="false" aria-controls="site-nav" onclick="var n=document.getElementById('site-nav');var o=n.classList.toggle('open');this.setAttribute('aria-expanded',o)">Menu</button>
+    <button class="menu-btn" type="button" aria-expanded="false" aria-controls="site-nav">Menu</button>
     <nav class="site-nav" id="site-nav" aria-label="Site">
       <a href="../#features">Features</a>
       <a href="../pricing/">Pricing</a>
@@ -46,7 +47,7 @@
   <li>The product is a set of static files (HTML, CSS, JavaScript) served from a web host. There is no backend, database, API or account system operated by us.</li>
   <li>All processing (reading .docx templates, evaluating answers, generating documents, encrypting storage) happens in the browser's JavaScript engine.</li>
   <li>Data at rest is in the browser's IndexedDB, scoped to the site origin and the browser profile.</li>
-  <li>After the initial load, the app makes no network requests. The service worker caches the app for offline use and only serves same-origin files.</li>
+  <li>The app only requests its own static files (code, sample templates, the intake-form runtime) from the site that serves it; it never uploads or posts anything, and it makes no request to any third party. The service worker caches those files for offline use and only handles same-origin requests.</li>
 </ul>
 <h2>What we can see</h2>
 <p>Nothing about your documents. The host serving the static files (GitHub Pages for the public instance) sees ordinary web-server traffic: the IP address and browser of whoever loads the app. There are no analytics, cookies, tracking pixels or third-party scripts. Fonts are system fonts.</p>
@@ -72,9 +73,9 @@
 </tbody></table>
 <h2>Verify it</h2>
 <ol>
-  <li>Open the app, then open the browser's developer tools → Network. Import a template, draft and generate. Observe zero requests after the initial page load (the service worker may show cache hits).</li>
+  <li>Open the app, then open the browser's developer tools → Network. Import a template, draft and generate. Every request is a GET for one of Clausery's own files on the same site (for example <code>samples/…docx</code> when you pick a sample); none carries your data, and none goes to another domain. After the app is installed these are answered by the service worker cache.</li>
   <li>Disconnect from the network. Everything continues to work.</li>
-  <li>Read the source: it is served unminified except for the bundled document library, whose exact upstream versions are listed in Settings → About.</li>
+  <li>Read the source: it is served unminified except for two built files: the bundled document library (<code>vendor/docs.js</code>, upstream versions listed in Settings → About) and the intake-form runtime (<code>vendor/intake-runtime.js</code>, built from <code>src/intake/runtime.js</code> and the app's own modules), which is what exported intake forms contain.</li>
 </ol>
 <h2>Reporting a vulnerability</h2>
 <p>Email <a href="mailto:security@clausery.app">security@clausery.app</a>. We aim to acknowledge within two business days. Please do not test against other people's deployments.</p></article></div></main>

@@ -2,11 +2,20 @@
 // Run with `npm run screenshots` (needs a built site: `npm run build`).
 import { chromium } from '@playwright/test';
 import { spawn } from 'node:child_process';
+/** Start tools/serve.mjs on a port and resolve once it is listening (no fixed sleeps). */
+function startServer(port) {
+  return new Promise((resolve, reject) => {
+    const child = spawn('node', ['tools/serve.mjs', String(port)], { cwd: process.cwd(), stdio: ['ignore', 'pipe', 'inherit'] });
+    const timer = setTimeout(() => reject(new Error('server did not start')), 15000);
+    child.stdout.on('data', (d) => { if (String(d).includes('serving')) { clearTimeout(timer); resolve(child); } });
+    child.on('exit', (code) => { clearTimeout(timer); reject(new Error('server exited with ' + code)); });
+  });
+}
+
 import { readFileSync, writeFileSync } from 'node:fs';
 
 const port = 4177;
-const server = spawn('node', ['tools/serve.mjs', String(port)], { cwd: process.cwd(), stdio: 'ignore' });
-await new Promise((r) => setTimeout(r, 900));
+const server = await startServer(port);
 const base = `http://127.0.0.1:${port}/clausery/`;
 const browser = await chromium.launch();
 try {

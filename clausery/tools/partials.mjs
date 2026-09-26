@@ -27,6 +27,7 @@ export function head({ title, description, path, extraHead = '' }) {
 <link rel="manifest" href="${rel}app/manifest.webmanifest">
 <link rel="stylesheet" href="${rel}site.css">
 <script src="${rel}app/theme.js"></script>
+<script src="${rel}site.js" defer></script>
 ${extraHead}
 </head>
 <body>
@@ -39,7 +40,7 @@ export function header(rel, path) {
   return `<header class="site-header">
   <div class="wrap">
     <a class="brand" href="${rel}"><img src="${rel}assets/icon.svg" alt="" width="30" height="30"> Clausery</a>
-    <button class="menu-btn" type="button" aria-expanded="false" aria-controls="site-nav" onclick="var n=document.getElementById('site-nav');var o=n.classList.toggle('open');this.setAttribute('aria-expanded',o)">Menu</button>
+    <button class="menu-btn" type="button" aria-expanded="false" aria-controls="site-nav">Menu</button>
     <nav class="site-nav" id="site-nav" aria-label="Site">
       <a href="${rel}#features">Features</a>
       <a href="${rel}pricing/"${cur('pricing/')}>Pricing</a>

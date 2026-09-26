@@ -15,7 +15,7 @@ createServer(async (req, res) => {
     if (!file.startsWith(root + sep) && file !== root) { res.writeHead(403); return res.end(); }
     let s = await stat(file).catch(() => null);
     if (s && s.isDirectory()) { if (!path.endsWith('/')) { res.writeHead(301, { Location: path + '/' }); return res.end(); } file = join(file, 'index.html'); s = await stat(file).catch(() => null); }
-    if (!s) { const nf = join(root, 'clausery', '404.html'); res.writeHead(404, { 'Content-Type': 'text/html; charset=utf-8' }); return res.end(await readFile(nf).catch(() => 'Not found')); }
+    if (!s) { const nf = join(root, '404.html'); /* GitHub Pages serves the repository-root 404.html for every miss */ res.writeHead(404, { 'Content-Type': 'text/html; charset=utf-8' }); return res.end(await readFile(nf).catch(() => 'Not found')); }
     const body = await readFile(file);
     res.writeHead(200, { 'Content-Type': TYPES[extname(file)] || 'application/octet-stream', 'Cache-Control': 'no-cache', 'X-Content-Type-Options': 'nosniff' });
     res.end(body);
