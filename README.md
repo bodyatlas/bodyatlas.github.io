@@ -14,4 +14,4 @@ The models are simplified illustrations for learning, not medical-grade scans.
 
 ---
 
-This repository also hosts **[Clausery](https://bodyatlas.github.io/clausery/)**, an unrelated project: browser-only document automation for law firms, HR and consultancies. It lives entirely in the [`clausery/`](clausery/) folder and has its own README, tests and CI.
+[Clausery](https://getclausery.github.io/), an unrelated project, has moved to its own repository, [getclausery/getclausery.github.io](https://github.com/getclausery/getclausery.github.io). The [`clausery/`](clausery/) folder here only redirects its old page addresses to the new site and keeps a frozen copy of the app for anyone whose drafts are stored in their browser at this address.

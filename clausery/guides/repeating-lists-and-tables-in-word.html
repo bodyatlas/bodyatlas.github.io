@@ -3,106 +3,12 @@
 <head>
 <meta charset="utf-8">
 <title>Repeating lists and table rows in Word templates · Clausery</title>
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="description" content="How to make a Word template repeat a paragraph, bullet or table row for every party, attorney, deliverable or line item, with separators and numbering.">
-<link rel="canonical" href="https://bodyatlas.github.io/clausery/guides/repeating-lists-and-tables-in-word.html">
-<meta property="og:type" content="website">
-<meta property="og:site_name" content="Clausery">
-<meta property="og:title" content="Repeating lists and table rows in Word templates · Clausery">
-<meta property="og:description" content="How to make a Word template repeat a paragraph, bullet or table row for every party, attorney, deliverable or line item, with separators and numbering.">
-<meta property="og:url" content="https://bodyatlas.github.io/clausery/guides/repeating-lists-and-tables-in-word.html">
-<meta property="og:image" content="https://bodyatlas.github.io/clausery/assets/og.png">
-<meta name="twitter:card" content="summary_large_image">
-<meta name="theme-color" content="#1b2a41">
-<meta name="referrer" content="strict-origin-when-cross-origin">
-<link rel="icon" href="../assets/icon.svg" type="image/svg+xml">
-<link rel="apple-touch-icon" href="../assets/icon-192.png">
-<link rel="manifest" href="../app/manifest.webmanifest">
-<link rel="alternate" type="application/atom+xml" title="Clausery guides and clause library" href="../feed.xml">
-<link rel="stylesheet" href="../site.css">
-<script src="../app/theme.js"></script>
-<script src="../site.js" defer></script>
-<script type="application/ld+json">{"@context":"https://schema.org","@type":"Article","headline":"Repeating lists and table rows in Word templates","description":"How to make a Word template repeat a paragraph, bullet or table row for every party, attorney, deliverable or line item, with separators and numbering.","datePublished":"2026-09-26","author":{"@type":"Organization","name":"Clausery"}}</script>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="Clausery has moved to getclausery.github.io.">
+<link rel="canonical" href="https://getclausery.github.io/guides/repeating-lists-and-tables-in-word.html">
+<meta http-equiv="refresh" content="0; url=https://getclausery.github.io/guides/repeating-lists-and-tables-in-word.html">
 </head>
 <body>
-<a class="sr-only" href="#main">Skip to content</a>
-<header class="site-header">
-  <div class="wrap">
-    <a class="brand" href="../"><img src="../assets/icon.svg" alt="" width="30" height="30"> Clausery</a>
-    <button class="menu-btn" type="button" aria-expanded="false" aria-controls="site-nav">Menu</button>
-    <nav class="site-nav" id="site-nav" aria-label="Site">
-      <a href="../templates/">Templates</a>
-      <a href="../#features">Features</a>
-      <a href="../pricing/">Pricing</a>
-      <a href="../docs/">Docs</a>
-      <a href="../docs/security.html">Security</a>
-      <a class="btn btn-primary" href="../app/">Open the app</a>
-    </nav>
-  </div>
-</header>
-<main id="main" tabindex="-1">
-<section class="section"><div class="wrap prose"><nav class="small muted" aria-label="Breadcrumb"><a href="../">Home</a> › <a href="../guides/">Guides</a></nav><h1 style="margin-top:1rem">Repeating lists and table rows in Word templates</h1>
-<p class="lead">Contracts and letters often list things: parties, attorneys, deliverables, beneficiaries, line items. The number changes every time. Here is how to make a Word template handle any number of them.</p>
-<h2>Repeat a paragraph or bullet</h2>
-<pre tabindex="0"><code>{#deliverables}
-• {title}: {description}, due {due_date}
-{/deliverables}</code></pre>
-<p>Everything between <code>{#deliverables}</code> and <code>{/deliverables}</code> is written once per deliverable. In the questionnaire, the person drafting clicks <em>Add deliverable</em> as many times as needed, and each item has its own title, description and due date.</p>
-<h2>Repeat a table row</h2>
-<p>Put the opening tag at the start of the first cell of a row and the closing tag at the end of the last cell of the same row:</p>
-<table><thead><tr><th>Item</th><th>Quantity</th><th>Price</th></tr></thead><tbody><tr><td><code>{#items}{name}</code></td><td><code>{qty}</code></td><td><code>{price}{/items}</code></td></tr></tbody></table>
-<p>The whole row repeats, so the table grows with the list and keeps your borders and shading.</p>
-<h2>Commas between names</h2>
-<p>To write "Ann, Ben and Cara"-style lists, use the built-in <code>{_last}</code> marker, which is true on the final item:</p>
-<pre tabindex="0"><code>{#parties}{name}{^_last}, {/_last}{/parties}</code></pre>
-<p><code>{_index}</code> gives the item number (1, 2, 3) and <code>{_count}</code> the total, which is useful for "Schedule {_index} of {_count}".</p>
-<h2>Optional details inside an item</h2>
-<p>Conditions work inside lists too: <code>{#attorneys}{name}{#is_partner}, Partner{/is_partner}{/attorneys}</code> asks a yes/no question for each attorney.</p>
-<h2>Totals</h2>
-<p>A computed field such as <code>sum(items.price)</code> adds up a column, and <code>count(items)</code> counts the rows. See <a href="../docs/logic.html">logic and calculations</a>.</p>
-<p>The free <a href="../templates/statement-of-work.html">statement of work</a> and <a href="../templates/engagement-letter.html">engagement letter</a> templates both use repeating lists, if you want a working example.</p></div></section></main>
-<footer class="site-footer">
-  <div class="wrap">
-    <div>
-      <h4>Clausery</h4>
-      <p>Document automation that never leaves your browser. Turn your own Word templates into guided questionnaires and generate finished documents, offline, with no account.</p>
-    </div>
-    <div>
-      <h4>Product</h4>
-      <a href="../app/">Open the app</a>
-      <a href="../pricing/">Pricing</a>
-      <a href="../changelog.html">Changelog</a>
-      <a href="../docs/self-hosting.html">Self-hosting</a>
-      <a href="../press/">Press kit</a>
-    </div>
-    <div>
-      <h4>Resources</h4>
-      <a href="../templates/">Free templates</a>
-      <a href="../guides/">Guides</a>
-      <a href="../clauses/">Clause library</a>
-      <a href="../free-tools/">Free tools</a>
-      <a href="../compare/">Compare</a>
-      <a href="../for/law-firms.html">For law firms</a>
-      <a href="../for/hr-teams.html">For HR teams</a>
-      <a href="../for/consultants.html">For consultants</a>
-    </div>
-    <div>
-      <h4>Docs</h4>
-      <a href="../docs/">Getting started</a>
-      <a href="../docs/templates.html">Template syntax</a>
-      <a href="../docs/logic.html">Logic &amp; calculations</a>
-      <a href="../docs/intake.html">Client intake</a>
-      <a href="../docs/security.html">Security</a>
-    </div>
-    <div>
-      <h4>Legal</h4>
-      <a href="../legal/privacy.html">Privacy</a>
-      <a href="../legal/terms.html">Terms</a>
-      <a href="../legal/dpa.html">Data processing</a>
-      <a href="mailto:hello@clausery.app">Contact</a>
-    </div>
-    <div class="legal">© 2026 Clausery. Clausery is software, not legal advice; documents you generate are your responsibility. Not affiliated with Microsoft; Word is a trademark of Microsoft Corporation.</div>
-  </div>
-</footer>
+<main id="main"><p>Clausery has moved. Continue to <a href="https://getclausery.github.io/guides/repeating-lists-and-tables-in-word.html">https://getclausery.github.io/guides/repeating-lists-and-tables-in-word.html</a>.</p></main>
 </body>
 </html>
