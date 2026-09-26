@@ -116,6 +116,14 @@
       building: false, loaded: [], failed: []
     };
     for (const k in H.SYSTEMS) state.systemsOn[k] = true;
+    // deep link: index.html#part=<id>[&sex=female] opens the viewer on that part (used by the /parts/ pages)
+    function linkFromHash() {
+      const q = new URLSearchParams(String(root.location.hash || '').replace(/^#/, ''));
+      const sex = q.get('sex');
+      return { part: q.get('part'), sex: sex === 'female' || sex === 'male' ? sex : null };
+    }
+    let pendingLink = linkFromHash();
+    if (pendingLink.sex) state.sex = pendingLink.sex;
 
     let parts = [], byId = new Map(), childrenOf = new Map(), pickables = [];
     const materials = new Set();      // every material used on the stage (for clipping / side)
@@ -811,10 +819,28 @@
         applyVisibility(); renderSelection(); updateSystemsUI(); updateTopbar();
         if (state.failed.length) showNotice('Skipped: ' + state.failed.map(f => f.id + ' (' + f.reason + ')').join('; '));
         if (el.loading) { el.loading.classList.add('done'); setTimeout(() => { el.loading.hidden = true; }, reduced() ? 0 : 420); }
+        if (pendingLink) openLinkedPart();
         requestRender();
       });
     };
     api.getSex = () => state.sex;
+    // show the linked part in context: peel down to its layer (ghosting what lies above), select it and fly to it
+    function openLinkedPart() {
+      const link = pendingLink; pendingLink = null;
+      const p = link && link.part && byId.get(link.part);
+      if (!p) return false;
+      state.isolated = null; state.hidden.delete(p.id); state.systemsOn[p.system] = true;
+      state.depth = Math.max(1, Math.floor(p.peel * 20) / 20); state.ghost = state.depth > 1;
+      updateDepthUI(); updateTopbar(); applyVisibility();
+      api.select(p.id); const box = resolveFocus(p.id); if (box) frameBox(box, null, 0);
+      return true;
+    }
+    root.addEventListener('hashchange', () => {
+      pendingLink = linkFromHash();
+      if (!pendingLink.part) { pendingLink = null; return; }
+      if (pendingLink.sex && pendingLink.sex !== state.sex) api.setSex(pendingLink.sex);
+      else if (!state.building) openLinkedPart();
+    });
     api.select = function (id) {
       const prevId = state.selected;
       if (id && !byId.has(id)) id = null;
@@ -897,6 +923,7 @@
     buildAll(state.sex, () => {
       applyVisibility(); updateSystemsUI(); renderSelection();
       frameBox(visibleBox(), VIEW_DIRS.iso, 0);
+      if (pendingLink) openLinkedPart();
       if (state.failed.length) {
         const txt = 'Unavailable: ' + state.failed.map(f => f.id + ' (' + f.reason + ')').join('; ');
         showNotice(txt, true);
