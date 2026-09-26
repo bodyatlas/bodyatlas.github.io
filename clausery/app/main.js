@@ -125,7 +125,8 @@ router
   .add('/templates/:id', (p) => guarded(designerView.render, p, 'templates', 'Edit template'))
   .add('/drafts', (p) => guarded(draftsView.render, p, 'drafts', 'Drafts'))
   .add('/drafts/:id', (p) => guarded(interviewView.render, p, 'drafts', 'Draft'))
-  .add('/settings', (p) => guarded(settingsView.render, p, 'settings', 'Settings'));
+  .add('/settings', (p) => guarded(settingsView.render, p, 'settings', 'Settings'))
+  .add('/start/:slug', (p) => guarded(templatesView.startFromSample, p, 'drafts', 'New draft'));
 router.notFound = () => router.go('/templates', true);
 
 // auto-lock after inactivity when a vault is enabled

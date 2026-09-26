@@ -82,3 +82,17 @@ test.describe('core drafting flow', () => {
     await expect(page.locator('.toast')).toContainText('Complete the highlighted');
   });
 });
+
+test('template library "Fill it in now" opens a ready draft, and reuses the template on a second visit', async ({ page }) => {
+  await page.goto('templates/payment-demand-letter.html');
+  await page.click('a:has-text("Fill it in now")');
+  await page.waitForSelector('.stepper');
+  await expect(page).toHaveURL(/#\/drafts\/d_/);
+  await expect(page.locator('#main .badge').first()).toHaveText('Payment demand letter');
+  await page.goto('app/#/start/payment-demand-letter');
+  await page.waitForSelector('.stepper');
+  await page.goto('app/#/templates');
+  await expect(page.locator('.cards article[data-template-id]')).toHaveCount(1);
+  await page.goto('app/#/drafts');
+  await expect(page.locator('tbody tr')).toHaveCount(2);
+});

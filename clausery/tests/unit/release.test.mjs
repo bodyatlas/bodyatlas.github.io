@@ -24,3 +24,13 @@ test('the service worker precaches every app file, and only files that exist', (
   const ghosts = [...listed].filter((f) => f && !f.endsWith('/') && !existsSync(join(root, f)));
   assert.deepEqual(ghosts, []);
 });
+
+test('every sample template is offered in the app and has a library page', async () => {
+  const files = globSync('samples/*.docx', { cwd: root }).map((f) => f.split(/[\\/]/).pop());
+  const app = read('app/ui/views/templates.js');
+  const lib = read('site/library.mjs');
+  for (const f of files) {
+    assert.ok(app.includes(`file: '${f}'`), `${f} missing from SAMPLES in app/ui/views/templates.js`);
+    assert.ok(lib.includes(`file: '${f}'`), `${f} missing from LIB in site/library.mjs`);
+  }
+});

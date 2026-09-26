@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>How to automate a Word template without uploading it anywhere · Clausery</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="A step-by-step guide to turning any Word document into a reusable, fill-in-the-blanks template with questions, conditional clauses and lists, entirely in your browser.">
+<link rel="canonical" href="https://bodyatlas.github.io/clausery/guides/automate-word-templates.html">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Clausery">
+<meta property="og:title" content="How to automate a Word template without uploading it anywhere · Clausery">
+<meta property="og:description" content="A step-by-step guide to turning any Word document into a reusable, fill-in-the-blanks template with questions, conditional clauses and lists, entirely in your browser.">
+<meta property="og:url" content="https://bodyatlas.github.io/clausery/guides/automate-word-templates.html">
+<meta property="og:image" content="https://bodyatlas.github.io/clausery/assets/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="theme-color" content="#1b2a41">
+<meta name="referrer" content="strict-origin-when-cross-origin">
+<link rel="icon" href="../assets/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="../assets/icon-192.png">
+<link rel="manifest" href="../app/manifest.webmanifest">
+<link rel="stylesheet" href="../site.css">
+<script src="../app/theme.js"></script>
+<script src="../site.js" defer></script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"Article","headline":"How to automate a Word template without uploading it anywhere","description":"A step-by-step guide to turning any Word document into a reusable, fill-in-the-blanks template with questions, conditional clauses and lists, entirely in your browser.","datePublished":"2026-09-26","author":{"@type":"Organization","name":"Clausery"}}</script>
+</head>
+<body>
+<a class="sr-only" href="#main">Skip to content</a>
+<header class="site-header">
+  <div class="wrap">
+    <a class="brand" href="../"><img src="../assets/icon.svg" alt="" width="30" height="30"> Clausery</a>
+    <button class="menu-btn" type="button" aria-expanded="false" aria-controls="site-nav">Menu</button>
+    <nav class="site-nav" id="site-nav" aria-label="Site">
+      <a href="../templates/">Templates</a>
+      <a href="../#features">Features</a>
+      <a href="../pricing/">Pricing</a>
+      <a href="../docs/">Docs</a>
+      <a href="../docs/security.html">Security</a>
+      <a class="btn btn-primary" href="../app/">Open the app</a>
+    </nav>
+  </div>
+</header>
+<main id="main" tabindex="-1">
+<section class="section"><div class="wrap prose"><nav class="small muted" aria-label="Breadcrumb"><a href="../">Home</a> › <a href="../guides/">Guides</a></nav><h1 style="margin-top:1rem">How to automate a Word template without uploading it anywhere</h1>
+<p class="lead">If you copy last month's letter and hunt for every name and date to change, this guide is for you. It takes about ten minutes for your first template.</p>
+<h2>1. Pick a document you draft often</h2>
+<p>Start with something you produce at least weekly: an engagement letter, an NDA, an offer letter. Open your best recent version in Word.</p>
+<h2>2. Replace the details that change with tags</h2>
+<p>Select a detail that changes, such as the client's name, and type a tag in curly braces instead: <code>{client_name}</code>. Use the same tag everywhere the same detail appears. Use letters, digits and underscores, and choose descriptive names; Clausery guesses the question type from them, so <code>{start_date}</code> becomes a date picker and <code>{retainer_amount}</code> a money field.</p>
+<pre tabindex="0"><code>This Agreement is made on {effective_date} between {client_name} and {firm_name}.</code></pre>
+<h2>3. Make optional paragraphs conditional</h2>
+<p>Wrap text that only sometimes applies in a section: <code>{#has_retainer}</code> before it and <code>{/has_retainer}</code> after it. Clausery asks a yes/no question and removes the paragraph when the answer is no. For the opposite case, use <code>{^has_retainer}…{/has_retainer}</code>.</p>
+<h2>4. Repeat lists</h2>
+<p>For parties, attorneys, deliverables or line items, wrap one item in a loop: <code>{#attorneys}{name}, {role}{/attorneys}</code>. The questionnaire lets you add as many as you need. In a table, put the opening tag in the first cell of a row and the closing tag in the last cell.</p>
+<h2>5. Save as .docx and drop it into Clausery</h2>
+<p>Open <a href="../app/">Clausery</a> and drop the file on the Templates page. Every tag becomes a question. Rename questions, add help text and group them into sections in the designer, then click <em>New draft</em>.</p>
+<h2>6. Generate the document</h2>
+<p>Answer the questions and download the finished .docx, or print to PDF. Your formatting is kept exactly, and nothing was uploaded at any point.</p>
+<p>Want to see a finished example first? Open one of the <a href="../templates/">free templates</a>, or read the full <a href="../docs/templates.html">template syntax</a>.</p></div></section></main>
+<footer class="site-footer">
+  <div class="wrap">
+    <div>
+      <h4>Clausery</h4>
+      <p>Document automation that never leaves your browser. Turn your own Word templates into guided questionnaires and generate finished documents, offline, with no account.</p>
+    </div>
+    <div>
+      <h4>Product</h4>
+      <a href="../app/">Open the app</a>
+      <a href="../pricing/">Pricing</a>
+      <a href="../changelog.html">Changelog</a>
+      <a href="../docs/self-hosting.html">Self-hosting</a>
+    </div>
+    <div>
+      <h4>Resources</h4>
+      <a href="../templates/">Free templates</a>
+      <a href="../guides/">Guides</a>
+      <a href="../compare/">Compare</a>
+      <a href="../for/law-firms.html">For law firms</a>
+      <a href="../for/hr-teams.html">For HR teams</a>
+      <a href="../for/consultants.html">For consultants</a>
+    </div>
+    <div>
+      <h4>Docs</h4>
+      <a href="../docs/">Getting started</a>
+      <a href="../docs/templates.html">Template syntax</a>
+      <a href="../docs/logic.html">Logic &amp; calculations</a>
+      <a href="../docs/intake.html">Client intake</a>
+      <a href="../docs/security.html">Security</a>
+    </div>
+    <div>
+      <h4>Legal</h4>
+      <a href="../legal/privacy.html">Privacy</a>
+      <a href="../legal/terms.html">Terms</a>
+      <a href="../legal/dpa.html">Data processing</a>
+      <a href="mailto:hello@clausery.app">Contact</a>
+    </div>
+    <div class="legal">© 2026 Clausery. Clausery is software, not legal advice; documents you generate are your responsibility. Not affiliated with Microsoft; Word is a trademark of Microsoft Corporation.</div>
+  </div>
+</footer>
+</body>
+</html>

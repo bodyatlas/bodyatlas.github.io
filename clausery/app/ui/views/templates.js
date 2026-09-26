@@ -3,10 +3,24 @@ import { inspectDocx, describeTemplateError, isDocxError } from '../../lib/rende
 import { inferQuestionnaire, newTemplate, newDraft, normalizeTemplate, uid, KEY_RX, isReservedKey } from '../../lib/schema.js';
 import { decodeBundle, encodePack, downloadBlob, safeFilename, checkDocxSize } from '../../lib/backup.js';
 
-const SAMPLES = [
-  { file: 'mutual-nda.docx', name: 'Mutual NDA', category: 'Legal', description: 'Two-party confidentiality agreement with optional carve-outs, jurisdiction and notice emails.' },
-  { file: 'engagement-letter.docx', name: 'Engagement letter', category: 'Legal', description: 'Law firm engagement letter with a repeating attorney list, hourly or flat fee, optional retainer.' },
-  { file: 'offer-letter.docx', name: 'Offer of employment', category: 'HR', description: 'Offer letter with remote/office variants, optional bonus and equity, and a benefits list.' },
+export const SAMPLES = [
+  { slug: 'mutual-nda', file: 'mutual-nda.docx', name: 'Mutual NDA', category: 'Legal', description: 'Two-party confidentiality agreement with optional carve-outs, jurisdiction and notice emails.' },
+  { slug: 'engagement-letter', file: 'engagement-letter.docx', name: 'Engagement letter', category: 'Legal', description: 'Law firm engagement letter with a repeating attorney list, hourly or flat fee, optional retainer.' },
+  { slug: 'offer-letter', file: 'offer-letter.docx', name: 'Offer of employment', category: 'HR', description: 'Offer letter with remote/office variants, optional bonus and equity, and a benefits list.' },
+  { slug: 'independent-contractor-agreement', file: 'independent-contractor-agreement.docx', name: 'Independent contractor agreement', category: 'Business', description: 'Hourly or fixed-fee contractor agreement with IP ownership choice, confidentiality and termination.' },
+  { slug: 'statement-of-work', file: 'statement-of-work.docx', name: 'Statement of work', category: 'Business', description: 'SOW with a repeating deliverables list, fixed-price or time-and-materials fees and acceptance terms.' },
+  { slug: 'employment-verification-letter', file: 'employment-verification-letter.docx', name: 'Employment verification letter', category: 'HR', description: 'Confirms current or past employment, with optional salary and purpose lines.' },
+  { slug: 'payment-demand-letter', file: 'payment-demand-letter.docx', name: 'Payment demand letter', category: 'Finance', description: 'Polite demand for an overdue balance with optional invoice number, interest and next steps.' },
+  { slug: 'one-way-nda', file: 'one-way-nda.docx', name: 'One-way NDA', category: 'Legal', description: 'Unilateral confidentiality agreement for when only one side shares information.' },
+  { slug: 'consulting-agreement', file: 'consulting-agreement.docx', name: 'Consulting agreement', category: 'Business', description: 'Retainer or day-rate consulting agreement with a deliverables list and notice period.' },
+  { slug: 'employment-termination-letter', file: 'employment-termination-letter.docx', name: 'Termination letter', category: 'HR', description: 'Notice of termination with notice or pay in lieu, final pay, optional severance and property return.' },
+  { slug: 'reference-letter', file: 'reference-letter.docx', name: 'Reference letter', category: 'HR', description: 'Employment reference with responsibilities, a list of strengths and an optional recommendation.' },
+  { slug: 'salary-increase-letter', file: 'salary-increase-letter.docx', name: 'Salary increase letter', category: 'HR', description: 'Confirms a raise and its effective date, with optional reason and title change.' },
+  { slug: 'internship-offer-letter', file: 'internship-offer-letter.docx', name: 'Internship offer letter', category: 'HR', description: 'Paid or unpaid internship offer with stipend, hours, supervisor and learning goals.' },
+  { slug: 'service-agreement', file: 'service-agreement.docx', name: 'Service agreement', category: 'Business', description: 'Service agreement with priced service items, deposit, late fees and fixed or renewing term.' },
+  { slug: 'cease-and-desist-letter', file: 'cease-and-desist-letter.docx', name: 'Cease and desist letter', category: 'Legal', description: 'Demand letter listing required actions, with an optional intellectual property claim.' },
+  { slug: 'promissory-note', file: 'promissory-note.docx', name: 'Promissory note', category: 'Finance', description: 'Loan note with optional interest, lump-sum or instalment repayment and a default clause.' },
+  { slug: 'resignation-letter', file: 'resignation-letter.docx', name: 'Resignation letter', category: 'HR', description: 'Professional resignation with notice period, optional reason, handover offer and thanks.' },
 ];
 
 export async function importDocxFile(ctx, file, { name } = {}) {
@@ -42,15 +56,34 @@ export function showTemplateErrors(messages) {
   modal({ title: 'The template has a problem', body: h('div.stack', h('p', 'Fix these in Word and upload the file again:'), h('ul', messages.map((m) => h('li', m))), h('p.small.muted', 'Tags look like {client_name}. Sections look like {#has_retainer}…{/has_retainer}. See the docs for the full syntax.')), actions: [{ label: 'OK', primary: true }] });
 }
 
-async function loadSample(ctx, s) {
+async function importSample(ctx, s) {
   const count = await ctx.templates.count();
-  if (!ctx.requirePlan('templates', { count })) return;
+  if (!ctx.requirePlan('templates', { count })) return null;
   const res = await fetch('../samples/' + s.file);
-  if (!res.ok) { toast('The sample could not be loaded.', { type: 'danger' }); return; }
+  if (!res.ok) { toast('The sample could not be loaded.', { type: 'danger' }); return null; }
   const blob = await res.blob();
   const file = new File([blob], s.file, { type: blob.type });
   const t = await importDocxFile(ctx, file, { name: s.name });
-  if (t) { t.category = s.category; t.description = s.description; await ctx.templates.save(t); ctx.navigate('/templates/' + t.id); }
+  if (t) { t.category = s.category; t.description = s.description; t.sample = s.slug; await ctx.templates.save(t); }
+  return t;
+}
+
+async function loadSample(ctx, s) {
+  const t = await importSample(ctx, s);
+  if (t) ctx.navigate('/templates/' + t.id);
+}
+
+/** Deep link from the public template library (#/start/<slug>): reuse the sample if it is already in the workspace,
+    otherwise import it, then open a new draft straight away so a visitor is filling it in within one click. */
+export async function startFromSample(ctx, { slug }) {
+  const s = SAMPLES.find((x) => x.slug === slug);
+  if (!s) { toast('That template is not available.', { type: 'warn' }); ctx.navigate('/templates'); return; }
+  const existing = (await ctx.templates.list()).find((t) => t.sample === slug || t.fileName === s.file);
+  const t = existing || await importSample(ctx, s);
+  if (!t) { ctx.router.go('/templates', true); return; }
+  const d = newDraft(t);
+  await ctx.drafts.save(d);
+  ctx.router.go('/drafts/' + d.id, true);
 }
 
 async function importPack(ctx) {

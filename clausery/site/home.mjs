@@ -65,6 +65,20 @@ export const pages = [{
   </div>
 </section>
 
+<section class="section section-alt" id="templates">
+  <div class="wrap">
+    <h2>Start with a free template</h2>
+    <p class="lead">Seventeen ready-made Word templates, each one click away from a finished document.</p>
+    <div class="grid grid-4">
+      <a class="feature" style="text-decoration:none;color:inherit" href="${rel}templates/mutual-nda.html"><h3>Mutual NDA</h3><p>Two-way confidentiality agreement.</p></a>
+      <a class="feature" style="text-decoration:none;color:inherit" href="${rel}templates/engagement-letter.html"><h3>Engagement letter</h3><p>Scope, team, fees and retainer.</p></a>
+      <a class="feature" style="text-decoration:none;color:inherit" href="${rel}templates/offer-letter.html"><h3>Offer letter</h3><p>Salary, bonus, equity, benefits.</p></a>
+      <a class="feature" style="text-decoration:none;color:inherit" href="${rel}templates/independent-contractor-agreement.html"><h3>Contractor agreement</h3><p>Hourly or fixed fee, IP, termination.</p></a>
+    </div>
+    <p style="margin-top:1.25rem"><a href="${rel}templates/">See all free templates →</a></p>
+  </div>
+</section>
+
 <section class="section" id="compare">
   <div class="wrap">
     <h2>How it compares</h2>
