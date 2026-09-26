@@ -184,6 +184,8 @@ input[type="range"] { accent-color: var(--text); margin: 0; }
 .panel-empty p { margin: 0 0 10px; color: var(--text-muted); }
 .panel-empty ul { margin: 0; padding-left: 16px; color: var(--text-muted); font-size: 12.5px; line-height: 1.6; }
 .panel-empty kbd, .keys kbd { font: 11px/1.3 var(--font-mono); color: var(--text); border: 1px solid var(--line); border-radius: 3px; padding: 0 4px; background: var(--control); }
+.panel-empty .browse { margin: 12px 0 0; font-size: 12.5px; }
+.panel-empty .browse a { color: var(--text); text-decoration-color: var(--accent); text-underline-offset: 2px; }
 .keys { margin-top: 14px; padding-top: 10px; border-top: 1px solid var(--line); font-size: 11.5px; color: var(--text-muted); line-height: 1.8; }
 .panel-close { position: absolute; right: 8px; top: 8px; width: 28px; height: 28px; border: 0; border-radius: 4px; background: transparent; color: var(--text-muted); font-size: 18px; line-height: 1; }
 .panel-close:hover { background: var(--control); color: var(--text); }

@@ -10,6 +10,8 @@ Interactive 3D human anatomy you can peel from skin to bone: every body system, 
 
 Every structure is generated procedurally with [Three.js](https://threejs.org) (r160, loaded from cdnjs) from a shared anatomical landmark set in `core/landmarks.js`; each body system is one module in `systems/`. It is a static site with no build step: serve the folder and open `index.html`.
 
+Every structure also has a plain, crawlable page under [`parts/`](https://bodyatlas.github.io/parts/) (listed in `sitemap.xml`) with its notes and a link that opens the 3D view on it (`/#part=<id>`, plus `&sex=female` for female-only parts). Those pages are generated from the system modules: after changing `systems/*.js`, run `npm install` once and then `npm run build:parts`, and commit the result. CI fails if the committed pages are out of date.
+
 The models are simplified illustrations for learning, not medical-grade scans.
 
 ---

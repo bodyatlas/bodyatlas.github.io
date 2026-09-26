@@ -1,0 +1,19 @@
+name: Structure pages up to date
+on:
+  pull_request:
+  push:
+    branches: [main]
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm ci
+      - run: npm run build:parts
+      - name: Fail if parts/ or sitemap.xml differ from a fresh build
+        run: |
+          git add -N parts sitemap.xml
+          git diff --exit-code --stat -- parts sitemap.xml || { echo "::error::Run 'npm run build:parts' and commit the result."; exit 1; }
