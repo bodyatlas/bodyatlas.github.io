@@ -42,6 +42,7 @@ export function header(rel, path) {
     <a class="brand" href="${rel}"><img src="${rel}assets/icon.svg" alt="" width="30" height="30"> Clausery</a>
     <button class="menu-btn" type="button" aria-expanded="false" aria-controls="site-nav">Menu</button>
     <nav class="site-nav" id="site-nav" aria-label="Site">
+      <a href="${rel}templates/"${cur('templates/')}>Templates</a>
       <a href="${rel}#features">Features</a>
       <a href="${rel}pricing/"${cur('pricing/')}>Pricing</a>
       <a href="${rel}docs/"${cur('docs/')}>Docs</a>
@@ -66,6 +67,15 @@ export function footer(rel) {
       <a href="${rel}pricing/">Pricing</a>
       <a href="${rel}changelog.html">Changelog</a>
       <a href="${rel}docs/self-hosting.html">Self-hosting</a>
+    </div>
+    <div>
+      <h4>Resources</h4>
+      <a href="${rel}templates/">Free templates</a>
+      <a href="${rel}guides/">Guides</a>
+      <a href="${rel}compare/">Compare</a>
+      <a href="${rel}for/law-firms.html">For law firms</a>
+      <a href="${rel}for/hr-teams.html">For HR teams</a>
+      <a href="${rel}for/consultants.html">For consultants</a>
     </div>
     <div>
       <h4>Docs</h4>

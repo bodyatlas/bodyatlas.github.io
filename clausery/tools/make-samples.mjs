@@ -112,8 +112,79 @@ const offer = doc([
   P('ACCEPTED:'), P('____________________________'), P('{candidate_full_name}'), P('Date: ______________'),
 ]);
 
+
+const contractor = doc([
+  Title('INDEPENDENT CONTRACTOR AGREEMENT'),
+  P('This Independent Contractor Agreement (the "Agreement") is made on {effective_date} between {client_name}, {client_address} (the "Client"), and {contractor_name}, {contractor_address} (the "Contractor").'),
+  H('1. Services'),
+  P('The Contractor will provide the following services (the "Services"): {services_description}. The Services begin on {start_date}{#has_end_date} and end on {end_date}{/has_end_date}{^has_end_date} and continue until either party ends this Agreement under section 6{/has_end_date}.'),
+  H('2. Fees'),
+  P('{#fee_hourly}The Client will pay the Contractor {hourly_rate} per hour for time spent on the Services{#has_hours_cap}, up to {hours_cap} hours per month unless the Client agrees otherwise in writing{/has_hours_cap}.{/fee_hourly}{#fee_fixed}The Client will pay the Contractor a fixed fee of {fixed_fee} for the Services.{/fee_fixed}'),
+  P('The Contractor will invoice the Client {invoice_frequency}. Invoices are due within {payment_days} days of receipt.{#reimburse_expenses} The Client will reimburse reasonable, pre-approved expenses supported by receipts.{/reimburse_expenses}'),
+  H('3. Independent contractor'),
+  P('The Contractor is an independent contractor, not an employee, partner or agent of the Client. The Contractor decides how, when and where to perform the Services, provides their own equipment, and is responsible for their own taxes, insurance and benefits.'),
+  H('4. Intellectual property'),
+  P('{#client_owns_ip}All work product created by the Contractor for the Client under this Agreement belongs to the Client once paid for, and the Contractor assigns all rights in it to the Client.{/client_owns_ip}{^client_owns_ip}The Contractor keeps ownership of their work product and grants the Client a non-exclusive, perpetual licence to use it for the Client\'s business once paid for.{/client_owns_ip}'),
+  H('5. Confidentiality'),
+  P('The Contractor will keep the Client\'s non-public information confidential and use it only to perform the Services, during this Agreement and for {confidentiality_years} years afterwards.'),
+  H('6. Termination'),
+  P('Either party may end this Agreement with {notice_days} days\' written notice. The Client will pay for Services performed up to the end date.'),
+  H('7. Governing law'),
+  P('This Agreement is governed by the laws of {governing_law}.'),
+  H('Signatures'),
+  P('{client_name}'), P('By: ____________________________'), P('Name: {client_signatory}'), P(''),
+  P('{contractor_name}'), P('Signature: ____________________________'),
+]);
+
+const sow = doc([
+  Title('STATEMENT OF WORK'),
+  P('Statement of Work number {sow_number}, dated {sow_date}, under the agreement between {client_name} (the "Client") and {provider_name} (the "Provider") dated {agreement_date}.'),
+  H2('Project'),
+  P('{project_name}: {project_summary}'),
+  H2('Deliverables'),
+  new Paragraph({ children: [new TextRun('{#deliverables}')] }),
+  Bullet('{title}: {description} (due {due_date})'),
+  new Paragraph({ children: [new TextRun('{/deliverables}')] }),
+  H2('Timeline'),
+  P('Work starts on {start_date} and is expected to finish by {end_date}.'),
+  H2('Fees'),
+  P('{#fixed_price}The total fixed price for this Statement of Work is {total_price}, invoiced {invoice_schedule}.{/fixed_price}{^fixed_price}Work is billed on a time-and-materials basis at {hourly_rate} per hour, with an estimated total of {estimated_total}.{/fixed_price}'),
+  H2('Assumptions'),
+  P('{assumptions}'),
+  H2('Acceptance'),
+  P('The Client will review each deliverable within {review_days} business days of delivery and either accept it or describe the changes needed.'),
+  P(''),
+  P('Accepted for {client_name}: ____________________________  Date: ______________'),
+  P('Accepted for {provider_name}: ____________________________  Date: ______________'),
+]);
+
+const verification = doc([
+  Title('EMPLOYMENT VERIFICATION LETTER'),
+  P('{letter_date}'),
+  P('To whom it may concern,'),
+  P('This letter confirms that {employee_name} {#is_current}is employed{/is_current}{^is_current}was employed{/is_current} by {company_name} as {job_title}{#is_current} since {start_date}{/is_current}{^is_current} from {start_date} to {end_date}{/is_current}.'),
+  P('{employee_first_name} {#is_current}works{/is_current}{^is_current}worked{/is_current} on a {employment_type} basis.'),
+  P('{#include_salary}{employee_first_name}\'s current annual base salary is {salary}.{/include_salary}'),
+  P('This letter is provided at the employee\'s request{#has_purpose} for the purpose of {purpose}{/has_purpose}. For further verification, please contact {contact_name} at {contact_email}.'),
+  P('Sincerely,'), P('{signatory_name}'), P('{signatory_title}, {company_name}'),
+]);
+
+const demand = doc([
+  Title('DEMAND FOR PAYMENT'),
+  P('{letter_date}'),
+  P('{debtor_name}'), P('{debtor_address}'),
+  P('Re: Outstanding balance of {amount_due}{#has_invoice_number} (invoice {invoice_number}){/has_invoice_number}'),
+  P('Dear {debtor_salutation},'),
+  P('Our records show that {amount_due} for {goods_or_services} provided by {creditor_name} was due on {due_date} and remains unpaid.'),
+  P('Please pay the full amount by {pay_by_date}. {payment_instructions}'),
+  P('{#charges_interest}Under the terms agreed between us, interest of {interest_rate} is being added to the overdue balance.{/charges_interest}'),
+  P('If you have already paid, please disregard this letter and send us the payment details so we can update our records. If you believe the amount is not owed, or you would like to agree a payment plan, please contact {contact_name} at {contact_email} before {pay_by_date}.'),
+  P('{#mention_next_steps}If we do not receive payment or hear from you by that date, we may take further steps to recover the debt, which may include {next_steps}.{/mention_next_steps}'),
+  P('Sincerely,'), P('{contact_name}'), P('{creditor_name}'),
+]);
+
 mkdirSync('samples', { recursive: true });
-for (const [file, d] of [['mutual-nda.docx', nda], ['engagement-letter.docx', engagement], ['offer-letter.docx', offer]]) {
+for (const [file, d] of [['mutual-nda.docx', nda], ['engagement-letter.docx', engagement], ['offer-letter.docx', offer], ['independent-contractor-agreement.docx', contractor], ['statement-of-work.docx', sow], ['employment-verification-letter.docx', verification], ['payment-demand-letter.docx', demand]]) {
   writeFileSync(`samples/${file}`, await deterministic(await Packer.toBuffer(d)));
   console.log('wrote samples/' + file);
 }

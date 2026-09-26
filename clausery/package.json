@@ -1,6 +1,6 @@
 {
   "name": "clausery",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "private": true,
   "description": "Clausery: browser-only document automation. Turn your own Word templates into guided questionnaires and generate finished documents without any data leaving the machine.",
   "type": "module",
@@ -19,7 +19,8 @@
     "verify": "npm run lint && npm run check:html && npm test",
     "build:site": "node tools/build-site.mjs",
     "smoke": "node tools/smoke.mjs",
-    "release": "node tools/release.mjs"
+    "release": "node tools/release.mjs",
+    "indexnow": "node tools/indexnow.mjs"
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.10.2",

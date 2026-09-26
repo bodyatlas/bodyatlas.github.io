@@ -23,7 +23,7 @@ export function humanize(key) {
 }
 
 const RX = {
-  condition: /^(has|is|if|show|include|with|no|needs|want|use|fee|pay|opt|allow|require|should|will|can)_/i,
+  condition: /^(has|is|if|show|include|with|no|needs|want|use|fee|pay|opt|allow|require|should|will|can|mention|add|charges|reimburse)_/i,
   plural: /(?:[^s]s|ies|list|items|entries|parties|children|people)$/i,
 };
 const TOKENS = {
@@ -32,7 +32,7 @@ const TOKENS = {
   phone: new Set(['phone', 'tel', 'telephone', 'mobile', 'fax', 'cell']),
   money: new Set(['amount', 'fee', 'fees', 'salary', 'rate', 'price', 'retainer', 'total', 'cost', 'deposit', 'rent', 'wage', 'wages', 'payment', 'compensation', 'budget', 'balance', 'premium', 'penalty', 'consideration']),
   number: new Set(['years', 'days', 'months', 'weeks', 'hours', 'count', 'number', 'qty', 'quantity', 'percent', 'percentage', 'pct', 'num', 'age', 'shares', 'units', 'term']),
-  long: new Set(['address', 'description', 'purpose', 'notes', 'details', 'summary', 'scope', 'reason', 'comments', 'background', 'recitals', 'terms']),
+  long: new Set(['address', 'description', 'purpose', 'notes', 'details', 'summary', 'scope', 'reason', 'comments', 'background', 'recitals', 'terms', 'instructions', 'assumptions', 'steps']),
 };
 
 /** Keys starting with "_" are supplied by the engine ({_index}, {_first}, {_last}, {_count}, {_today}, {_firm_name}) and are never questions. */
@@ -46,7 +46,8 @@ export function inferFieldType(key) {
   if (has(TOKENS.email)) return 'email';
   if (has(TOKENS.phone)) return 'phone';
   if (toks.length > 1 && /^(number|num|no|id)$/.test(last) && !toks.includes('of')) return 'text';   // case_number, invoice_no, tax_id are identifiers, not quantities
-  if (has(TOKENS.long)) return 'textarea';   // before number/money so flat_fee_terms and rate_description are free text
+  if (has(TOKENS.long)) return 'textarea';
+  if (toks.includes('interest') || toks.includes('tax') || toks.includes('vat')) return toks.includes('amount') ? 'money' : 'text';   // interest_rate / tax_rate are percentages, not money   // before number/money so flat_fee_terms and rate_description are free text
   if (has(TOKENS.number)) return 'number';
   if (has(TOKENS.money)) return 'money';
   return 'text';
@@ -132,9 +133,19 @@ export function inferQuestionnaire(inspection) {
   const addChild = (groupKey, f) => { const g = byKey.get(groupKey); if (g && Array.isArray(g.children) && !g.children.some((c) => c.key === f.key)) g.children.push(f); };
   const sharedWarned = new Set();
 
+  // A tag can appear in several places (for example once under {#is_current} and once under {^is_current}); it must be
+  // asked whenever any of those places renders, so the show-when rules of all its occurrences are combined with "or".
+  const chainsByKey = new Map();
+  for (const o of order) {
+    const id = (parentIsRepeat(o) || '') + '|' + o.key;
+    if (!chainsByKey.has(id)) chainsByKey.set(id, []);
+    chainsByKey.get(id).push(conditionChain(o));
+  }
+  const combinedShowIf = (o) => combineChains(chainsByKey.get((parentIsRepeat(o) || '') + '|' + o.key) || ['']);
+
   for (const o of order) {
     const repeatParent = parentIsRepeat(o);
-    const showIf = conditionChain(o);
+    const showIf = combinedShowIf(o);
     if (o.section) {
       const n = nodeOf(o);
       if (n.role === 'repeat') {
@@ -178,6 +189,31 @@ export function inferQuestionnaire(inspection) {
   }
   if (sections.length > 1) { const g = sections.find((s) => s.title === 'General'); if (g) { sections.splice(sections.indexOf(g), 1); sections.unshift(g); } }
   return { sections, fields, warnings };
+}
+
+/** Combine the show-when chains of a tag's occurrences ("a and b", "a and not b", ...) into one rule. An occurrence with no
+    condition wins outright; two chains that differ only in "x" versus "not x" merge (x or not x is always true). */
+export function combineChains(chains) {
+  let sets = [...new Set(chains)].map((c) => (c ? c.split(' and ') : []));
+  if (sets.some((t) => t.length === 0)) return '';
+  let merged = true;
+  while (merged && sets.length > 1) {
+    merged = false;
+    outer: for (let i = 0; i < sets.length; i++) for (let j = i + 1; j < sets.length; j++) {
+      const a = sets[i], b = sets[j];
+      if (a.length !== b.length) continue;
+      const onlyA = a.filter((t) => !b.includes(t)), onlyB = b.filter((t) => !a.includes(t));
+      if (onlyA.length === 1 && onlyB.length === 1 && (onlyA[0] === 'not ' + onlyB[0] || onlyB[0] === 'not ' + onlyA[0])) {
+        const rest = a.filter((t) => t !== onlyA[0]);
+        if (!rest.length) return '';
+        sets = sets.filter((_, k) => k !== i && k !== j).concat([rest]);
+        merged = true; break outer;
+      }
+    }
+    sets = [...new Map(sets.map((t) => [t.join(' and '), t])).values()];
+  }
+  if (sets.length === 1) return sets[0].join(' and ');
+  return sets.map((t) => (t.length > 1 ? '(' + t.join(' and ') + ')' : t[0])).join(' or ');
 }
 
 export function singular(key) {

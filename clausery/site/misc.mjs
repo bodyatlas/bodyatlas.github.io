@@ -7,6 +7,13 @@ export const pages = [
     path: 'changelog.html', title: 'Changelog', description: 'What changed in each Clausery release.',
     body: (rel) => `<section class="section"><div class="wrap prose">
 <h1>Changelog</h1>
+<h2>1.1.0 <span class="small muted">— 26 September 2026</span></h2>
+<ul>
+  <li>Free template library: independent contractor agreement, statement of work, employment verification letter and payment demand letter join the NDA, engagement letter and offer letter.</li>
+  <li>One-click start: template pages open the questionnaire directly in the app.</li>
+  <li>A tag used in several optional parts of a document is now asked whenever any of those parts applies.</li>
+  <li>Better question types for instructions, assumptions and interest rates.</li>
+</ul>
 <h2>1.0.0 <span class="small muted">— 24 September 2026</span></h2>
 <p>First public release.</p>
 <ul>

@@ -246,3 +246,31 @@ test('F61: whitespace after a section tag alone in its paragraph does not leave 
   const xml = '<w:p><w:r><w:t xml:space="preserve">Hello {name} </w:t></w:r></w:p><w:p w:rsidR="1"/><w:p><w:r><w:t xml:space="preserve"> {#a}</w:t></w:r></w:p><w:pPr/>';
   assert.equal(tidyLoneSectionTags(xml), '<w:p><w:r><w:t xml:space="preserve">Hello {name} </w:t></w:r></w:p><w:p w:rsidR="1"/><w:p><w:r><w:t xml:space="preserve">{#a}</w:t></w:r></w:p><w:pPr/>');
 });
+
+test('a tag in several branches is asked whenever any branch renders', async () => {
+  const { combineChains } = await import('../../app/lib/schema.js');
+  assert.equal(combineChains(['is_current', 'not is_current']), '');
+  assert.equal(combineChains(['a and b', 'a and not b']), 'a');
+  assert.equal(combineChains(['a', '']), '');
+  assert.equal(combineChains(['a', 'a']), 'a');
+  assert.equal(combineChains(['a', 'b']), 'a or b');
+  assert.equal(combineChains(['a and b', 'c']), '(a and b) or c');
+});
+
+test('shipped samples infer sensible questionnaires', async () => {
+  const { readFileSync } = await import('node:fs');
+  const { inspectDocx } = await import('../../app/lib/render.js');
+  const { inferQuestionnaire } = await import('../../app/lib/schema.js');
+  const q = (f) => Object.fromEntries(inferQuestionnaire(inspectDocx(readFileSync(new URL(`../../samples/${f}.docx`, import.meta.url)))).fields.map((x) => [x.key, x]));
+  const ver = q('employment-verification-letter');
+  assert.equal(ver.start_date.showIf, '');
+  assert.equal(ver.end_date.showIf, 'not is_current');
+  const dem = q('payment-demand-letter');
+  assert.equal(dem.payment_instructions.type, 'textarea');
+  assert.equal(dem.interest_rate.type, 'text');
+  assert.equal(dem.mention_next_steps.type, 'checkbox');
+  const sow = q('statement-of-work');
+  assert.equal(sow.deliverables.type, 'repeat');
+  assert.deepEqual(sow.deliverables.children.map((c) => c.key), ['title', 'description', 'due_date']);
+  assert.equal(sow.hourly_rate.showIf, 'not fixed_price');
+});

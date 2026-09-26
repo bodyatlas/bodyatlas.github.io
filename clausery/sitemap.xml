@@ -1,6 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url><loc>https://bodyatlas.github.io/clausery/changelog.html</loc><priority>0.8</priority></url>
+  <url><loc>https://bodyatlas.github.io/clausery/compare/clio-draft-alternative.html</loc><priority>0.8</priority></url>
+  <url><loc>https://bodyatlas.github.io/clausery/compare/docassemble-alternative.html</loc><priority>0.8</priority></url>
+  <url><loc>https://bodyatlas.github.io/clausery/compare/gavel-alternative.html</loc><priority>0.8</priority></url>
+  <url><loc>https://bodyatlas.github.io/clausery/compare/hotdocs-alternative.html</loc><priority>0.8</priority></url>
+  <url><loc>https://bodyatlas.github.io/clausery/compare/</loc><priority>0.8</priority></url>
   <url><loc>https://bodyatlas.github.io/clausery/docs/backups.html</loc><priority>0.6</priority></url>
   <url><loc>https://bodyatlas.github.io/clausery/docs/faq.html</loc><priority>0.6</priority></url>
   <url><loc>https://bodyatlas.github.io/clausery/docs/</loc><priority>0.6</priority></url>
@@ -11,9 +16,24 @@
   <url><loc>https://bodyatlas.github.io/clausery/docs/self-hosting.html</loc><priority>0.6</priority></url>
   <url><loc>https://bodyatlas.github.io/clausery/docs/teams.html</loc><priority>0.6</priority></url>
   <url><loc>https://bodyatlas.github.io/clausery/docs/templates.html</loc><priority>0.6</priority></url>
+  <url><loc>https://bodyatlas.github.io/clausery/for/consultants.html</loc><priority>0.8</priority></url>
+  <url><loc>https://bodyatlas.github.io/clausery/for/hr-teams.html</loc><priority>0.8</priority></url>
+  <url><loc>https://bodyatlas.github.io/clausery/for/law-firms.html</loc><priority>0.8</priority></url>
+  <url><loc>https://bodyatlas.github.io/clausery/guides/automate-word-templates.html</loc><priority>0.8</priority></url>
+  <url><loc>https://bodyatlas.github.io/clausery/guides/client-intake-without-a-portal.html</loc><priority>0.8</priority></url>
+  <url><loc>https://bodyatlas.github.io/clausery/guides/conditional-clauses-in-word.html</loc><priority>0.8</priority></url>
+  <url><loc>https://bodyatlas.github.io/clausery/guides/</loc><priority>0.8</priority></url>
   <url><loc>https://bodyatlas.github.io/clausery/</loc><priority>1.0</priority></url>
   <url><loc>https://bodyatlas.github.io/clausery/legal/dpa.html</loc><priority>0.8</priority></url>
   <url><loc>https://bodyatlas.github.io/clausery/legal/privacy.html</loc><priority>0.8</priority></url>
   <url><loc>https://bodyatlas.github.io/clausery/legal/terms.html</loc><priority>0.8</priority></url>
   <url><loc>https://bodyatlas.github.io/clausery/pricing/</loc><priority>0.8</priority></url>
+  <url><loc>https://bodyatlas.github.io/clausery/templates/employment-verification-letter.html</loc><priority>0.8</priority></url>
+  <url><loc>https://bodyatlas.github.io/clausery/templates/engagement-letter.html</loc><priority>0.8</priority></url>
+  <url><loc>https://bodyatlas.github.io/clausery/templates/independent-contractor-agreement.html</loc><priority>0.8</priority></url>
+  <url><loc>https://bodyatlas.github.io/clausery/templates/</loc><priority>0.8</priority></url>
+  <url><loc>https://bodyatlas.github.io/clausery/templates/mutual-nda.html</loc><priority>0.8</priority></url>
+  <url><loc>https://bodyatlas.github.io/clausery/templates/offer-letter.html</loc><priority>0.8</priority></url>
+  <url><loc>https://bodyatlas.github.io/clausery/templates/payment-demand-letter.html</loc><priority>0.8</priority></url>
+  <url><loc>https://bodyatlas.github.io/clausery/templates/statement-of-work.html</loc><priority>0.8</priority></url>
 </urlset>
