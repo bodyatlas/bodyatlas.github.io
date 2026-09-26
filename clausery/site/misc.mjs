@@ -7,6 +7,13 @@ export const pages = [
     path: 'changelog.html', title: 'Changelog', description: 'What changed in each Clausery release.',
     body: (rel) => `<section class="section"><div class="wrap prose">
 <h1>Changelog</h1>
+<h2>1.2.0 <span class="small muted">— 26 September 2026</span></h2>
+<ul>
+  <li>Contract clause library: plain-English explanations and copyable sample wording for 24 common clauses, each with the matching Clausery tags.</li>
+  <li>New guides on offer letters, payment demand letters, statements of work and NDAs.</li>
+  <li>Template pages link to explanations of the clauses they contain.</li>
+  <li>Atom feed for guides and clauses, and an llms.txt summary for AI assistants.</li>
+</ul>
 <h2>1.1.0 <span class="small muted">— 26 September 2026</span></h2>
 <ul>
   <li>Free template library of 17 Word templates: NDAs (mutual and one-way), engagement letter, consulting, service and independent contractor agreements, statement of work, offer, internship, salary increase, verification, reference, termination and resignation letters, payment demand, cease and desist, and a promissory note.</li>

@@ -75,7 +75,7 @@ export const pages = [{
       <a class="feature" style="text-decoration:none;color:inherit" href="${rel}templates/offer-letter.html"><h3>Offer letter</h3><p>Salary, bonus, equity, benefits.</p></a>
       <a class="feature" style="text-decoration:none;color:inherit" href="${rel}templates/independent-contractor-agreement.html"><h3>Contractor agreement</h3><p>Hourly or fixed fee, IP, termination.</p></a>
     </div>
-    <p style="margin-top:1.25rem"><a href="${rel}templates/">See all free templates →</a></p>
+    <p style="margin-top:1.25rem"><a href="${rel}templates/">See all free templates →</a> &nbsp;·&nbsp; <a href="${rel}clauses/">Contract clauses explained →</a> &nbsp;·&nbsp; <a href="${rel}free-tools/">Free drafting tools →</a></p>
   </div>
 </section>
 
