@@ -5,7 +5,7 @@ import { inspectDocx } from '../app/lib/render.js';
 import { inferQuestionnaire, FIELD_TYPES } from '../app/lib/schema.js';
 import { esc } from '../tools/partials.mjs';
 
-const LIB = [
+export const LIB = [
   { slug: 'mutual-nda', file: 'mutual-nda.docx', name: 'Mutual NDA', title: 'Free mutual NDA template (Word)', category: 'Legal',
     intro: 'A two-way non-disclosure agreement for when both sides will share confidential information: partnership talks, M&A conversations, joint ventures, vendor evaluations.',
     who: 'Founders, in-house counsel and law firms who send NDAs every week and are tired of editing party names by hand.',
@@ -127,7 +127,7 @@ export const pages = [
     const qs = questionsFor(t.file);
     const faq = [...t.faq, ...COMMON_FAQ];
     return {
-      path: `templates/${t.slug}.html`, title: t.title,
+      path: `templates/${t.slug}.html`, title: t.title, ogImage: `assets/og/${t.slug}.png`,
       description: `${t.intro} Download the free Word template or fill it in online in minutes. Nothing is uploaded.`.slice(0, 300),
       extraHead: faqLd(faq) + crumbsLd([['Home', ''], ['Templates', 'templates/'], [t.name, `templates/${t.slug}.html`]]),
       body: (rel) => `

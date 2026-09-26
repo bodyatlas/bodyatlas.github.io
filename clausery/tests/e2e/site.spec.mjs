@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 
-const PAGES = ['', 'pricing/', 'docs/', 'docs/templates.html', 'docs/security.html', 'legal/privacy.html', '404.html', 'templates/', 'templates/statement-of-work.html', 'compare/gavel-alternative.html', 'for/law-firms.html', 'guides/automate-word-templates.html'];
+const PAGES = ['', 'pricing/', 'docs/', 'docs/templates.html', 'docs/security.html', 'legal/privacy.html', '404.html', 'templates/', 'templates/statement-of-work.html', 'compare/gavel-alternative.html', 'for/law-firms.html', 'guides/automate-word-templates.html', 'free-tools/amount-in-words.html', 'free-tools/deadline-calculator.html', 'free-tools/template-checker.html', 'press/'];
 for (const p of PAGES) {
   test(`site page ${p || 'home'} renders and has no serious accessibility violations`, async ({ page }) => {
     const res = await page.goto(p);
@@ -38,4 +38,18 @@ test('mobile menu opens under a strict script policy (no inline handlers)', asyn
   await expect(btn).toHaveAttribute('aria-expanded', 'true');
   expect(await page.locator('[onclick]').count()).toBe(0);
   await expect(page.locator('[data-checkout="pro"]')).toHaveText(/Request a pro key|Get Pro/);
+});
+
+test('free tools work in the page', async ({ page }) => {
+  await page.goto('free-tools/amount-in-words.html');
+  await page.fill('#amount', '3500');
+  await expect(page.locator('#result')).toHaveText('Three Thousand Five Hundred Dollars');
+  await page.goto('free-tools/deadline-calculator.html');
+  await page.fill('#start', '2026-01-31'); await page.selectOption('#unit', 'months'); await page.fill('#amount', '1');
+  await expect(page.locator('#result')).toHaveText('Saturday, February 28, 2026');
+  await page.goto('free-tools/template-checker.html');
+  await page.setInputFiles('#file', 'samples/engagement-letter.docx');
+  await expect(page.locator('#report')).toContainText('No problems found');
+  await expect(page.locator('#report table tbody tr')).toHaveCount(15);
+  await expect(page.locator('#report')).toContainText('For each item: Name, Role, Rate');
 });
