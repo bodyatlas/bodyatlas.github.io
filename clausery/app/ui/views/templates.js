@@ -11,6 +11,16 @@ export const SAMPLES = [
   { slug: 'statement-of-work', file: 'statement-of-work.docx', name: 'Statement of work', category: 'Business', description: 'SOW with a repeating deliverables list, fixed-price or time-and-materials fees and acceptance terms.' },
   { slug: 'employment-verification-letter', file: 'employment-verification-letter.docx', name: 'Employment verification letter', category: 'HR', description: 'Confirms current or past employment, with optional salary and purpose lines.' },
   { slug: 'payment-demand-letter', file: 'payment-demand-letter.docx', name: 'Payment demand letter', category: 'Finance', description: 'Polite demand for an overdue balance with optional invoice number, interest and next steps.' },
+  { slug: 'one-way-nda', file: 'one-way-nda.docx', name: 'One-way NDA', category: 'Legal', description: 'Unilateral confidentiality agreement for when only one side shares information.' },
+  { slug: 'consulting-agreement', file: 'consulting-agreement.docx', name: 'Consulting agreement', category: 'Business', description: 'Retainer or day-rate consulting agreement with a deliverables list and notice period.' },
+  { slug: 'employment-termination-letter', file: 'employment-termination-letter.docx', name: 'Termination letter', category: 'HR', description: 'Notice of termination with notice or pay in lieu, final pay, optional severance and property return.' },
+  { slug: 'reference-letter', file: 'reference-letter.docx', name: 'Reference letter', category: 'HR', description: 'Employment reference with responsibilities, a list of strengths and an optional recommendation.' },
+  { slug: 'salary-increase-letter', file: 'salary-increase-letter.docx', name: 'Salary increase letter', category: 'HR', description: 'Confirms a raise and its effective date, with optional reason and title change.' },
+  { slug: 'internship-offer-letter', file: 'internship-offer-letter.docx', name: 'Internship offer letter', category: 'HR', description: 'Paid or unpaid internship offer with stipend, hours, supervisor and learning goals.' },
+  { slug: 'service-agreement', file: 'service-agreement.docx', name: 'Service agreement', category: 'Business', description: 'Service agreement with priced service items, deposit, late fees and fixed or renewing term.' },
+  { slug: 'cease-and-desist-letter', file: 'cease-and-desist-letter.docx', name: 'Cease and desist letter', category: 'Legal', description: 'Demand letter listing required actions, with an optional intellectual property claim.' },
+  { slug: 'promissory-note', file: 'promissory-note.docx', name: 'Promissory note', category: 'Finance', description: 'Loan note with optional interest, lump-sum or instalment repayment and a default clause.' },
+  { slug: 'resignation-letter', file: 'resignation-letter.docx', name: 'Resignation letter', category: 'HR', description: 'Professional resignation with notice period, optional reason, handover offer and thanks.' },
 ];
 
 export async function importDocxFile(ctx, file, { name } = {}) {

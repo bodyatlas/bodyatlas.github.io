@@ -273,4 +273,12 @@ test('shipped samples infer sensible questionnaires', async () => {
   assert.equal(sow.deliverables.type, 'repeat');
   assert.deepEqual(sow.deliverables.children.map((c) => c.key), ['title', 'description', 'due_date']);
   assert.equal(sow.hourly_rate.showIf, 'not fixed_price');
+  const cd = q('cease-and-desist-letter');
+  assert.equal(cd.reserve_rights.type, 'checkbox');           // every tag inside is shared with the rest of the letter
+  assert.equal(cd.demands.type, 'repeat');
+  const svc = q('service-agreement');
+  assert.equal(svc.auto_renews.type, 'checkbox');
+  assert.equal(svc.service_items.type, 'repeat');
+  assert.equal(q('resignation-letter').last_day.type, 'date');
+  assert.equal(q('reference-letter').strengths.type, 'repeat');
 });

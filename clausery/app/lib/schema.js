@@ -23,7 +23,7 @@ export function humanize(key) {
 }
 
 const RX = {
-  condition: /^(has|is|if|show|include|with|no|needs|want|use|fee|pay|opt|allow|require|should|will|can|mention|add|charges|reimburse)_/i,
+  condition: /^(has|is|if|show|include|with|no|needs|want|use|fee|pay|opt|allow|require|should|will|can|mention|add|charges|reimburse|auto)_/i,
   plural: /(?:[^s]s|ies|list|items|entries|parties|children|people)$/i,
 };
 const TOKENS = {
@@ -32,7 +32,7 @@ const TOKENS = {
   phone: new Set(['phone', 'tel', 'telephone', 'mobile', 'fax', 'cell']),
   money: new Set(['amount', 'fee', 'fees', 'salary', 'rate', 'price', 'retainer', 'total', 'cost', 'deposit', 'rent', 'wage', 'wages', 'payment', 'compensation', 'budget', 'balance', 'premium', 'penalty', 'consideration']),
   number: new Set(['years', 'days', 'months', 'weeks', 'hours', 'count', 'number', 'qty', 'quantity', 'percent', 'percentage', 'pct', 'num', 'age', 'shares', 'units', 'term']),
-  long: new Set(['address', 'description', 'purpose', 'notes', 'details', 'summary', 'scope', 'reason', 'comments', 'background', 'recitals', 'terms', 'instructions', 'assumptions', 'steps']),
+  long: new Set(['address', 'description', 'purpose', 'notes', 'details', 'summary', 'scope', 'reason', 'comments', 'background', 'recitals', 'terms', 'instructions', 'assumptions', 'steps', 'responsibilities', 'objectives', 'plan', 'appreciation']),
 };
 
 /** Keys starting with "_" are supplied by the engine ({_index}, {_first}, {_last}, {_count}, {_today}, {_firm_name}) and are never questions. */
@@ -42,7 +42,7 @@ export function inferFieldType(key) {
   const toks = String(key).toLowerCase().split(/[_-]+/).filter(Boolean);
   const has = (set) => toks.some((t) => set.has(t));
   const last = toks[toks.length - 1] || '';
-  if (has(TOKENS.date) || /^(start|end)$/.test(last) && toks.length > 1) return 'date';
+  if (has(TOKENS.date) || (/^(start|end|day)$/.test(last) && toks.length > 1)) return 'date';   // start/end/last_day; plural 'days' stays a number
   if (has(TOKENS.email)) return 'email';
   if (has(TOKENS.phone)) return 'phone';
   if (toks.length > 1 && /^(number|num|no|id)$/.test(last) && !toks.includes('of')) return 'text';   // case_number, invoice_no, tax_id are identifiers, not quantities
@@ -57,10 +57,14 @@ export function inferFieldType(key) {
  * {^items}Nothing listed{/items} is the empty-list branch of a group, which the renderer supports.
  * @param {{ hasChildren?: boolean, childKeys?: string[] }} opts childKeys are the plain tags directly inside the section
  */
-export function inferSectionRole(key, { hasChildren = false, childKeys = [] } = {}) {
+export function inferSectionRole(key, { hasChildren = false, childKeys = [], sharesOutside = false } = {}) {   // sharesOutside: every tag inside also appears outside the section
   if (RX.condition.test(key)) return 'condition';
   if (/(ss|us|is)$/i.test(key)) return 'condition';   // bonus, status, basis: not plurals
-  if (childKeys.length && childKeys.every((k) => String(k).toLowerCase().startsWith(String(key).toLowerCase() + '_'))) return 'condition';   // {#bonus}{bonus_amount}{/bonus}
+  const k = String(key).toLowerCase();
+  // {#bonus}{bonus_amount}{/bonus}: fields named after the section describe that one thing
+  if (childKeys.length && childKeys.every((c) => String(c).toLowerCase().startsWith(k + '_'))) return 'condition';
+  // {#reserve_rights}...{sender_name}...{/reserve_rights}: a list whose every field is printed elsewhere too has no rows of its own
+  if (sharesOutside) return 'condition';
   if (hasChildren && RX.plural.test(key)) return 'repeat';
   return 'condition';
 }
@@ -103,7 +107,10 @@ export function inferQuestionnaire(inspection) {
   const valueKeys = new Set(order.filter((o) => !o.section).map((o) => o.key));
   for (const n of sectionNodes.values()) {
     const kids = n.children.filter((c) => !c.section).map((c) => c.key);
-    n.role = inferSectionRole(n.key, { hasChildren: kids.length > 0, childKeys: kids });
+    // a tag that also appears outside this section is shared data, which points to a condition rather than a list
+    const outside = order.filter((o) => !o.section && o.parent !== n.key && !(o.ancestors || []).some((x) => x.key === n.key)).map((o) => o.key);
+    const sharesOutside = kids.length > 0 && kids.every((k) => outside.includes(k));
+    n.role = inferSectionRole(n.key, { hasChildren: kids.length > 0, childKeys: kids, sharesOutside });
     if (n.role === 'repeat') {
       if (valueKeys.has(n.key)) warnings.push(`"${n.key}" is used both as a plain tag and as a repeating section. It was made a repeating group; the plain {${n.key}} tag will not print anything useful.`);
     } else if (valueKeys.has(n.key)) {
