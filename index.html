@@ -1,18 +1,55 @@
 <!doctype html>
 <html lang="en">
 <head>
-<title>Layered Body Atlas</title>
 <meta charset="utf-8">
+<title>Layered Body Atlas: Interactive 3D Human Anatomy</title>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="Interactive 3D human anatomy you can peel from skin to bone: every body system, both eyes and ears in detail, cross-sections and part-by-part notes.">
+<link rel="canonical" href="https://bodyatlas.github.io/">
+<meta name="theme-color" content="#efe9df" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0f1723" media="(prefers-color-scheme: dark)">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Layered Body Atlas">
+<meta property="og:title" content="Layered Body Atlas: Interactive 3D Human Anatomy">
+<meta property="og:description" content="Peel the human body from skin to bone in 3D. 1,285 parts, each with its Latin name, function and a clinical note. Free, no sign-up.">
+<meta property="og:url" content="https://bodyatlas.github.io/">
+<meta property="og:image" content="https://bodyatlas.github.io/assets/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="Three 3D renders of the body peeled to muscles, organs and skeleton, beside the title Layered Body Atlas">
+<meta name="twitter:card" content="summary_large_image">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=Newsreader:ital,wght@0,400;0,500;1,400&display=swap">
 <link rel="stylesheet" href="core/ui.css">
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
-<meta name="description" content="Interactive 3D human anatomy you can peel from skin to bone: every body system, both eyes and ears in detail, cross-sections and part-by-part notes.">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
 <style>[hidden]{display:none!important} img{max-width:100%}</style>
+<noscript><style>.loading{display:none} .noscript{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);z-index:100;max-width:30rem;padding:1.25rem 1.5rem;border:1px solid var(--line);border-radius:10px;background:var(--bg);box-shadow:0 0 0 100vmax var(--bg);color:var(--text);font-size:15px;line-height:1.55}</style></noscript>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "WebApplication",
+  "name": "Layered Body Atlas",
+  "url": "https://bodyatlas.github.io/",
+  "description": "Interactive 3D human anatomy you can peel from skin to bone: every body system, both eyes and ears in detail, cross-sections and part-by-part notes.",
+  "image": "https://bodyatlas.github.io/assets/og.png",
+  "applicationCategory": "EducationalApplication",
+  "operatingSystem": "Any (web browser with WebGL)",
+  "browserRequirements": "Requires JavaScript and WebGL",
+  "isAccessibleForFree": true,
+  "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+  "inLanguage": "en",
+  "about": { "@type": "Thing", "name": "Human anatomy" },
+  "educationalUse": "Self-study",
+  "learningResourceType": "Interactive 3D model"
+}
+</script>
+<!-- Privacy-friendly visitor counts: GoatCounter sets no cookies and stores no personal data. -->
+<script data-goatcounter="https://bodyatlas.goatcounter.com/count" async src="https://gc.zgo.at/count.js"></script>
 </head>
 <body>
+<noscript><div class="noscript"><strong>Layered Body Atlas</strong> is an interactive 3D model of the human body. It needs JavaScript and WebGL to run; please turn JavaScript on to explore it.</div></noscript>
 
 <div class="atlas" id="atlas">
   <div class="stage" id="stage"></div>
@@ -80,6 +117,7 @@
   <aside class="panel" id="panel" aria-label="Selected structure">
     <div class="sheet-head"><h2>Details</h2><button class="btn small quiet" type="button" data-close-sheet>Close</button></div>
     <div class="panel-empty" id="panel-empty">
+      <p class="intro">A free 3D atlas of the human body. Peel it through ten layers from skin to skeleton, across every body system and both eyes and ears. Each of the 1,285 parts has its English and Latin name, function, size and a clinical note.</p>
       <h2>How to explore</h2>
       <p>Hover any structure for its name; click it for the full card.</p>
       <ul>
