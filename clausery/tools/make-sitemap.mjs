@@ -4,7 +4,7 @@
 import { writeFileSync, globSync } from 'node:fs';
 
 const base = 'https://bodyatlas.github.io/clausery/';
-const skip = (f) => /^(node_modules|app|test-results|playwright-report)\//.test(f) || f === '404.html' || f === 'offline.html';
+const skip = (f) => /^(node_modules|app|test-results|playwright-report)\//.test(f) || f === '404.html' || f === 'offline.html' || /^google[0-9a-f]+\.html$/.test(f);   // search-console verification files
 const pages = globSync('**/*.html').map((f) => f.split('\\').join('/')).filter((f) => !skip(f)).sort();
 const xml = `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${pages.map((f) => {
   const p = f.replace(/index\.html$/, '');

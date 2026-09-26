@@ -5,7 +5,7 @@ import { join, dirname, resolve } from 'node:path';
 import { globSync } from 'node:fs';
 
 const root = process.cwd();
-const files = globSync('**/*.html', { cwd: root, exclude: (f) => f.startsWith('node_modules') || f.startsWith('test-results') || f.startsWith('playwright-report') });
+const files = globSync('**/*.html', { cwd: root, exclude: (f) => /^google[0-9a-f]+\.html$/.test(f) || f.startsWith('node_modules') || f.startsWith('test-results') || f.startsWith('playwright-report') });
 let problems = 0;
 const fail = (f, msg) => { problems++; console.log(`${f}: ${msg}`); };
 for (const f of files) {
